@@ -41,8 +41,12 @@ class ComplexMeasurement(torch.nn.Module):
         projector_imag = torch.bmm(kernel_imag, kernel_real.transpose(1, 2)) \
             - torch.bmm(kernel_real, kernel_imag.transpose(1, 2))
         
-        output_real = torch.mm(input_real.view(batch_size, self.embed_dim*self.embed_dim), projector_real.view(self.units,self.embed_dim*self.embed_dim).t())\
-        - torch.mm(input_imag.view( batch_size, self.embed_dim*self.embed_dim), projector_imag.view(self.units,self.embed_dim*self.embed_dim).t())
+        if input_real.dim() == 3:
+            output_real = torch.matmul(input_real.view(batch_size, self.embed_dim*self.embed_dim), projector_real.view(self.units,self.embed_dim*self.embed_dim).t())\
+            - torch.matmul(input_imag.view( batch_size, self.embed_dim*self.embed_dim), projector_imag.view(self.units,self.embed_dim*self.embed_dim).t())
+        else:
+            output_real = torch.matmul(input_real.view(batch_size, input_real.shape[1], self.embed_dim*self.embed_dim), projector_real.view(self.units,self.embed_dim*self.embed_dim).t())\
+            - torch.matmul(input_imag.view( batch_size, input_real.shape[1], self.embed_dim*self.embed_dim), projector_imag.view(self.units,self.embed_dim*self.embed_dim).t())
         
 #        output_imag = torch.mm(input_real.view(batch_size, self.embed_dim*self.embed_dim), projector_imag.view(self.units,self.embed_dim*self.embed_dim).t())\
 #        + torch.mm(input_imag.view(batch_size, self.embed_dim*self.embed_dim), projector_real.view(self.units,self.embed_dim*self.embed_dim).t())
@@ -55,7 +59,7 @@ if __name__ == '__main__':
     b = torch.randn(5,6,6)
 
     y_pred = model([a,b])
-    print(y_pred[0])
+    print(y_pred.shape)
     
     
     

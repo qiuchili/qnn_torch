@@ -18,6 +18,8 @@ import numpy as np
 import preprocess.embedding
 from keras.models import Model
 import tensorflow as tf
+import torch
+import torch.nn as nn
 from loss import *
 import pandas as pd
 
@@ -27,20 +29,14 @@ from loss.triplet_loss import *
 import loss.pairwise_loss
 import loss.triplet_loss
 import models
-
-#import tensorflow as tf
-#
-
+#from distutils.util import strtobool
 
 gpu_count = len(units.get_available_gpus())
 dir_path,global_logger = units.getLogger()
 
 from tools.logger import Logger
 logger = Logger()     
-#
-#import os
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   
-#os.environ["CUDA_VISIBLE_DEVICES"] = ""
+import os
 
 
 def myzip(train_x,train_x_mask):
@@ -50,29 +46,85 @@ def myzip(train_x,train_x_mask):
         results.append((train_x[i],train_x_mask[i]))
     return results
 
-#def batch_softmax_with_first_item(x):
-#    x_exp = np.exp(x)
-#    x_sum = np.repeat(np.expand_dims(np.sum(x_exp, axis=1),1), x.shape[1], axis=1)
-#    return x_exp / x_sum
 
 def run(params):
-    if "bert" in params.network_type.lower() :
+    # Loss and Optimizer
+    if params.bert_enabled == True:
         params.max_sequence_length = 512
-        reader.max_sequence_length = 512
+        params.reader.max_sequence_length = 512
+#    evaluation=[]
+#    params=dataset.classification.process_embedding(reader,params)    
+    model = models.setup(params)
+    criterion = nn.CrossEntropyLoss()    # optimizer = self.opt.optimizer(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)
+
+
+    test_x, test_y = params.reader.get_test(iterable = False)
+    test_inputs = torch.Tensor(test_x)
+    test_targets = torch.Tensor(test_y)
+    
+    for i in range(params.epochs):
+        print('epoch: ', i)
+        train_accs = []
+        losses = []
+        for sample_batched in params.reader.get_train(iterable = True):
+            model.train()
+            optimizer.zero_grad()
+            inputs = sample_batched['X'].long()
+            targets = sample_batched['y'].long()
+            outputs = model(inputs)
+            loss = criterion(outputs, torch.max(targets, 1)[1])
+            loss.backward(retain_graph = True)
+            optimizer.step()
+
+            n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
+            n_total = len(outputs)
+            train_acc = n_correct / n_total
+            print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
+            train_accs.append(train_acc)
+            losses.append(loss.item())
+            
+        avg_train_acc = np.mean(train_accs)
+        avg_loss = np.mean(losses)
+        print('average train_acc: {}, average train_loss: {}'.format(avg_train_acc, avg_loss))
+        test_outputs = model(test_inputs.long())
+        n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
+        n_total = len(test_outputs)
+        test_acc = n_correct / n_total
+        loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
+        print('test_acc: {}, test_loss: {}'.format(test_acc,loss.item()))
+#        test_acc, f1 = self._evaluate_acc_f1()
+#        if test_acc > max_test_acc:
+#            max_test_acc = test_acc
+#        if f1 > max_f1:
+#            max_f1 = f1
+#        print('loss: {:.4f}, acc: {:.4f}, test_acc: {:.4f}, f1: {:.4f}'.format(loss.item(), train_acc, test_acc, f1))
+        
+#        max_test_acc, max_f1 = self._train(criterion, optimizer)
+#        print('max_test_acc: {0}     max_f1: {1}'.format(max_test_acc, max_f1))
+#        max_test_acc_avg += max_test_acc
+#        max_f1_avg += max_f1
+#        print('#' * 100)
+#    print("max_test_acc_avg:", max_test_acc_avg / repeats)
+#    print("max_f1_avg:", max_f1_avg / repeats)
+
+def run_keras(params):
+    if params.bert_enabled == True:
+        params.max_sequence_length = 512
+        params.reader.max_sequence_length = 512
     evaluation=[]
 #    params=dataset.classification.process_embedding(reader,params)    
     qdnn = models.setup(params)
     model = qdnn.getModel()
     model.summary()
     if hasattr(loss.pairwise_loss, params.loss): 
-            
         loss_func = getattr(loss.pairwise_loss, params.loss)
     else:
         loss_func = params.loss
     optimizer = units.getOptimizer(name=params.optimizer,lr=params.lr)
+#    
     
-    test_data = params.reader.get_test(iterable = False)
-    test_data = [to_array(i,reader.max_sequence_length) for i in test_data]
+#    test_data = [to_array(i,params.max_sequence_length) for i in test_data]
     if hasattr(loss.pairwise_loss, params.metric_type):
         metric_func = getattr(loss.pairwise_loss, params.metric_type)
     else:
@@ -94,13 +146,14 @@ def run(params):
     # matrix = acc
       
     if params.dataset_type == 'qa':
+        test_data = params.reader.get_test(iterable = False)
 #        from models.match import keras as models   
         for i in range(params.epochs):
-            model.fit_generator(reader.batch_gen(reader.get_train(iterable = True)),epochs = 1,steps_per_epoch=int(len(reader.datas["train"])/reader.batch_size),verbose = True)        
+            model.fit_generator(params.reader.batch_gen(params.reader.get_train(iterable = True)),epochs = 1,steps_per_epoch=int(len(reader.datas["train"])/reader.batch_size),verbose = True)        
             y_pred = model.predict(x = test_data) 
             score = batch_softmax_with_first_item(y_pred)[:,1]  if params.onehot else y_pred
                 
-            metric = reader.evaluate(score, mode = "test")
+            metric = params.reader.evaluate(score, mode = "test")
             evaluation.append(metric)
             print(metric)
             logger.info(metric)
@@ -108,100 +161,42 @@ def run(params):
 
             
     elif params.dataset_type == 'classification':
-#        from models import representation as models   
+
+#        train_x,train_y = params.reader.get_train(iterable = False)
+#        test_x, test_y = params.reader.get_test(iterable = False)
+        val_x,val_y = params.reader.get_val(iterable = False)
         
-    #    model.summary()    
-        train_data = params.reader.get_train(iterable = False)
-        test_data = params.reader.get_test(iterable = False)
-        val_data =params.reader.get_val(iterable = False)
-    #    (train_x, train_y),(test_x, test_y),(val_x, val_y) = reader.get_processed_data()
-        train_x, train_y = train_data
-        test_x, test_y = test_data
-        val_x, val_y = val_data
-        if "bert" in params.network_type.lower() :
-            train_x, train_x_mask = to_array(train_x,reader.max_sequence_length,use_mask=True) 
-            test_x,test_x_mask =  to_array(test_x,reader.max_sequence_length,use_mask=True)
-            val_x,val_x_mask =  to_array(val_x,reader.max_sequence_length,use_mask=True)
-                #pretrain_x, pretrain_y = dataset.get_sentiment_dic_training_data(reader,params)
-            #model.fit(x=pretrain_x, y = pretrain_y, batch_size = params.batch_size, epochs= 3,validation_data= (test_x, test_y))
+        model.fit_generator(params.reader.get_train(iterable = True),epochs = 1, steps_per_epoch=int(len(reader.datas["train"])/reader.batch_size),verbose = False)
         
-            history = model.fit(x=[train_x,train_x_mask], y = train_y, batch_size = params.batch_size, epochs= params.epochs,validation_data= ([test_x,test_x_mask], test_y))
+#        history = model.fit(x=train_x, y = train_y, batch_size = params.batch_size, epochs= params.epochs,validation_data= (test_x, test_y))
         
-            metric = model.evaluate(x = [val_x,val_x_mask], y = val_y)   # !!!!!! change the order to val and test myzip(
-        else:
-            train_x = to_array(train_x,reader.max_sequence_length,use_mask=False) 
-            test_x =  to_array(test_x,reader.max_sequence_length,use_mask=False)
-            val_x =  to_array(val_x,reader.max_sequence_length,use_mask=False)
-            #pretrain_x, pretrain_y = dataset.get_sentiment_dic_training_data(reader,params)
-            #model.fit(x=pretrain_x, y = pretrain_y, batch_size = params.batch_size, epochs= 3,validation_data= (test_x, test_y))
+        metric = model.evaluate(x = val_x, y = val_y)   # !!!!!! change the order to val and test
         
-            history = model.fit(x=train_x, y = train_y, batch_size = params.batch_size, epochs= params.epochs,validation_data= (test_x, test_y))
-        
-            metric = model.evaluate(x = val_x, y = val_y)   # !!!!!! change the order to val and test
-            
         evaluation.append(metric)
         logger.info(metric)
+#        print(history)
         print(metric)
 
-        df=pd.DataFrame(evaluation,columns=["map","mrr","p1"])  
+        df=pd.DataFrame(evaluation,columns=["mean_squared_error","accuracy"])  
         
     logger.info("\n".join([params.to_string(),"score: "+str(df.max().to_dict())]))
 
     K.clear_session()
 
 
-#grid_parameters ={
-#        #"dataset_name":["SST_2"],
-#        "wordvec_path":["glove/glove.6B.50d.txt"],#"glove/glove.6B.300d.txt"],"glove/normalized_vectors.txt","glove/glove.6B.50d.txt","glove/glove.6B.100d.txt",
-#        "loss": ["categorical_crossentropy"],#"mean_squared_error"],,"categorical_hinge"
-#        "optimizer":["rmsprop"], #"adagrad","adamax","nadam"],,"adadelta","adam"
-#        "batch_size":[16],#,32
-#        "activation":["sigmoid"],
-#        "amplitude_l2":[0], #0.0000005,0.0000001,
-#        "phase_l2":[0.00000005],
-#        "dense_l2":[0],#0.0001,0.00001,0],
-#        "measurement_size" :[30],#,50100],
-#        "lr" : [0.1],#,1,0.01
-#        "dropout_rate_embedding" : [0.9],#0.5,0.75,0.8,0.9,1],
-#        "dropout_rate_probs" : [0.9],#,0.5,0.75,0.8,1]    ,
-#        "ablation" : [1],
-##        "network_type" : ["ablation"]
-#    }
 if __name__=="__main__":
 
  # import argparse
     parser = argparse.ArgumentParser(description='running the complex embedding network')
-    parser.add_argument('-gpu_num', action = 'store', dest = 'gpu_num', help = 'please enter the gpu num.',default=gpu_count)
+    parser.add_argument('-gpu_num', action = 'store', dest = 'gpu_num', help = 'please enter the gpu num.',default=2)
     parser.add_argument('-gpu', action = 'store', dest = 'gpu', help = 'please enter the gpu num.',default=0)
-    args = parser.parse_args()
-    
-#    parameters= [arg for index,arg in enumerate(itertools.product(*grid_parameters.values())) if index%args.gpu_num==args.gpu]
-     
-#    parameters= parameters[::-1]        
+    args = parser.parse_args()      
     params = Params()
-    config_file = 'config/config.ini'    # define dataset in the config
+    config_file = 'config/config_local.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
     params.reader = reader
         
     run(params)
-#    for parameter in parameters:
-#        old_dataset = params.dataset_name
-#        params.setup(zip(grid_parameters.keys(),parameter))
-#        
-#        if old_dataset != params.dataset_name:
-#            print("switch {} to {}".format(old_dataset,params.dataset_name))
-#        
-#        print('dataset type is {}.'.format(params.dataset_type))
-#        reader = dataset.setup(params)
-##        params.print()
-##        dir_path,logger = units.getLogger()
-##        params.save(dir_path)
-#        params.reader = reader
-#        
-#        run(params)
-##        global_logger.info("%s : %.4f "%( params.to_string() ,max(history.history["val_acc"])))
-#        K.clear_session()
-
 

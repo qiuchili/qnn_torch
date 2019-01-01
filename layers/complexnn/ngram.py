@@ -25,12 +25,19 @@ class NGram(torch.nn.Module):
         slice_end_index = -1
 
         seq_len = inputs.size(self.dim)
-        single_padded_len = self.gram_n - 1
-        single_padded_range = torch.tensor(np.arange(single_padded_len), dtype=torch.long)
-        single_padded_zeros = torch.zeros_like(torch.index_select(inputs, self.dim, single_padded_range))
-        inputs = torch.cat([single_padded_zeros, inputs, single_padded_zeros], dim=self.dim)
+        total_padded_len = self.gram_n - 1
+        left_padded_len = int(total_padded_len/2)
+        right_padded_len = total_padded_len - left_padded_len
+        
+        left_padded_range = torch.tensor(np.arange(left_padded_len), dtype=torch.long)
+        left_padded_zeros = torch.zeros_like(torch.index_select(inputs, self.dim, left_padded_range))
+        
+        right_padded_range = torch.tensor(np.arange(right_padded_len), dtype=torch.long)
+        right_padded_zeros = torch.zeros_like(torch.index_select(inputs, self.dim, right_padded_range))
+        
+        inputs = torch.cat([left_padded_zeros, inputs, right_padded_zeros], dim=self.dim)
 
-        out_n = seq_len + self.gram_n - 1 
+        out_n = seq_len 
         list_of_ngrams = []
         
         for i in range(out_n):
@@ -45,8 +52,8 @@ class NGram(torch.nn.Module):
         return ngram_mat
 
 def test():
-    n_gram = NGram()
-    a = torch.randn(4, 10, 3)
+    n_gram = NGram(gram_n = 4)
+    a = torch.LongTensor(2,5).random_(0, 10)
     n_gram_mat = n_gram(a)
     print(n_gram_mat)
     if n_gram_mat.dim() == a.dim() + 1:

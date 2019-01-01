@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.pytorch.complexnn import *
+from layers.complexnn import *
 
 class QDNN(torch.nn.Module):
     def __init__(self, opt):
@@ -31,6 +31,8 @@ class QDNN(torch.nn.Module):
         self.mixture = ComplexMixture(use_weights = True)
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
         self.dense = nn.Linear(in_features = 2*self.num_measurements, out_features = 2)
+        self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
+
         
     def forward(self, input_seq):
         """
@@ -48,8 +50,11 @@ class QDNN(torch.nn.Module):
         [seq_embedding_real, seq_embedding_imag] = self.complex_multiply([phase_embedding, amplitude_embedding])
         [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag,weights])
         
-        amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
-        mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
+        mea_operator = None
+        if self.use_lexicon_as_measurement:
+            amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
+            mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
+        
         output = self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator)
         output = torch.log10(output)
         output = self.dense(output)

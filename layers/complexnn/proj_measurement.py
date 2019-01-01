@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.nn
 from torch.optim import SGD
 from optimizer.pytorch_optimizer import Vanilla_Unitary
+from torch.distributions import Categorical
 class ComplexProjMeasurement(torch.nn.Module):
     def __init__(self, embed_dim):
         super(ComplexProjMeasurement, self).__init__()
@@ -29,24 +30,59 @@ class ComplexProjMeasurement(torch.nn.Module):
         
         kernel_real = self.kernel[:,:,0] #(embed_dim,embed_dim)
         kernel_imag = self.kernel[:,:,1] #(embed_dim,embed_dim)
-        
+
 #        batch_size = inputs[0].size(0)
     
         
         input_real = inputs[0] #(batch_size,embed_dim,embed_dim)
         input_imag = inputs[1] #(batch_size,embed_dim,embed_dim)
         batch_size = input_real.shape[0]
-        dim = input_real.shape[1]
-        output = torch.zeros(batch_size,dim)
+#        print(torch.matmul(kernel_real,kernel_real)+torch.matmul(kernel_imag,kernel_imag))
         
-        for i in range(dim):
-            v_real = kernel_real[i,:]
-            v_imag = kernel_imag[i,:]
-            proj_real = torch.matmul(v_real.view(dim,1),v_real.view(1,dim))+torch.matmul(v_imag.view(dim,1),v_imag.view(1,dim))
-            proj_imag = torch.matmul(v_real.view(dim,1),v_imag.view(1,dim))-torch.matmul(v_imag.view(dim,1),v_real.view(1,dim))
-            multiplication = torch.matmul(input_real,proj_real.view(1,dim,dim))-torch.matmul(input_imag,proj_imag.view(1,dim,dim))
+        
+        if input_real.dim() == 3:
+            dim = input_real.shape[-1]      
+            output = torch.zeros(batch_size, dim,2)
             for j in range(batch_size):
-                output[j,i]=torch.trace(multiplication[j,:,:])
+                prob_distribution = torch.zeros(dim)
+                for i in range(dim):
+                    v_real = kernel_real[i,:]
+                    v_imag = kernel_imag[i,:]
+                    proj_real = torch.matmul(v_real.view(dim,1),v_real.view(1,dim))+torch.matmul(v_imag.view(dim,1),v_imag.view(1,dim))
+                    proj_imag = torch.matmul(v_real.view(dim,1),v_imag.view(1,dim))-torch.matmul(v_imag.view(dim,1),v_real.view(1,dim))
+                    multiplication = torch.matmul(input_real,proj_real.view(1,dim,dim))-torch.matmul(input_imag,proj_imag.view(1,dim,dim))
+                    prob_distribution[i]=torch.trace(multiplication[j,:,:])
+                    
+                m = Categorical(prob_distribution)           
+                print(prob_distribution)
+                index = m.sample()
+                output[j,:,0] = kernel_real[index,:]
+                output[j,:,1] = kernel_imag[index,:]
+            output = [output[:,:,0],output[:,:,1]]
+            
+        elif input_real.dim() == 4:
+            dim = input_real.shape[-1]
+            seq_len = input_real.shape[1]
+            output = torch.zeros(batch_size,seq_len,dim,2)
+            for j in range(batch_size):
+                for k in range(seq_len):
+                    prob_distribution = torch.zeros(dim)
+                    for i in range(dim):
+                        v_real = kernel_real[i,:]
+                        v_imag = kernel_imag[i,:]
+                        proj_real = torch.matmul(v_real.view(dim,1),v_real.view(1,dim))+torch.matmul(v_imag.view(dim,1),v_imag.view(1,dim))
+                        proj_imag = torch.matmul(v_real.view(dim,1),v_imag.view(1,dim))-torch.matmul(v_imag.view(dim,1),v_real.view(1,dim))
+                        multiplication = torch.matmul(input_real,proj_real.view(1,dim,dim))-torch.matmul(input_imag,proj_imag.view(1,dim,dim))
+                        prob_distribution[i]=torch.trace(multiplication[j,k,:,:])
+                    
+                    m = Categorical(prob_distribution)           
+#                    print(prob_distribution)
+                    index = m.sample()
+                    output[j,k,:,0] = kernel_real[index,:]
+                    output[j,k,:,1] = kernel_imag[index,:]
+            output = [output[:,:,0],output[:,:,1]]
+
+                    
         
     
 #        output_imag = torch.matmul(input_real,kernel_imag) + torch.matmul(input_imag, kernel_real)
@@ -67,41 +103,27 @@ class ComplexProjMeasurement(torch.nn.Module):
         return output
     
 if __name__ == '__main__':
+  
     model = ComplexProjMeasurement(100)
     loss_function = torch.nn.MSELoss()
-    optimizer = Vanilla_Unitary(model.parameters(), lr = 0.05)
+    optimizer = Vanilla_Unitary(model.parameters(), lr = 0.01)
     
-    a = torch.randn(5,100,100)
-
-    b = torch.randn(5,100,100)
-    c = torch.randn(5,100)
+    a = torch.randn(5,10,100,100)
+    b = torch.randn(5,10,100,100)
+    c = torch.randn(5,10,100)
     losses = []
     for epoch in range(100):
        
         x_input = [a,b]
-        # Step 1. Prepare the inputs to be passed to the model (i.e, turn the words
-        # into integer indices and wrap them in tensors)
-#        x_input = torch.tensor([[1,2,3],[2,45,8]],dtype = torch.long)
-    
-        # Step 2. Recall that torch *accumulates* gradients. Before passing in a
-        # new instance, you need to zero out the gradients from the old
-        # instance
         optimizer.zero_grad()
         y_pred = model(x_input)
-#    
-#    reader = dataset.setup(params)
-#    params.reader = reader
-#    
-
-        # Step 4. Compute your loss function. (Again, Torch wants the target
-        # word wrapped in a tensor)
         loss = loss_function(y_pred, c)  
         loss.backward()
         optimizer.step()
         total_loss = loss.item()
         losses.append(total_loss)
         
-#    print(losses)
+    print(losses)
     
     
     
