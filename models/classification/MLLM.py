@@ -40,7 +40,7 @@ class MLLM(torch.nn.Module):
         self.proj_measurement = ComplexProjMeasurement(self.embedding_dim)
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-        self.num_hidden_layers = 3
+        self.num_hidden_layers = opt.num_hidden_layers
         
     def forward(self, input_seq):
         """

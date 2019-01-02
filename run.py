@@ -192,7 +192,7 @@ if __name__=="__main__":
     parser.add_argument('-gpu', action = 'store', dest = 'gpu', help = 'please enter the gpu num.',default=0)
     args = parser.parse_args()      
     params = Params()
-    config_file = 'config/config_local.ini'    # define dataset in the config
+    config_file = 'config/config_multilayer.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
