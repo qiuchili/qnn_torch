@@ -10,13 +10,6 @@ import numpy as np
 import preprocess.embedding
 import torch
 import torch.nn as nn
-from loss import *
-import pandas as pd
-
-from loss.pairwise_loss import *
-from loss.triplet_loss import *
-import loss.pairwise_loss
-import loss.triplet_loss
 import models
 
 def run(params):
@@ -45,7 +38,7 @@ def run(params):
             targets = sample_batched['y'].long().to(params.device)
             outputs = model(inputs)
             loss = criterion(outputs, torch.max(targets, 1)[1])
-            loss.backward()
+            loss.backward(retain_graph=True)
             optimizer.step()
 
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()

@@ -6,7 +6,7 @@ from optimizer.pytorch_optimizer import Vanilla_Unitary
 from .measurement import ComplexMeasurement
 
 class ComplexProjMeasurement(torch.nn.Module):
-    def __init__(self, opt, embed_dim, method='ensemble'):
+    def __init__(self, opt, embed_dim, method='sample'):
         super(ComplexProjMeasurement, self).__init__()
         self.opt = opt
         self.embed_dim = embed_dim
@@ -45,7 +45,7 @@ class ComplexProjMeasurement(torch.nn.Module):
             imag_samples.append(imag_sample)
         real_samples = torch.cat(real_samples, dim=1)
         imag_samples = torch.cat(imag_samples, dim=1)
-        return [real_sample, imag_samples]
+        return [real_samples, imag_samples]
     
 if __name__ == '__main__':
     pass

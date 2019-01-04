@@ -42,19 +42,20 @@ class MLLM(torch.nn.Module):
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
         self.num_hidden_layers = opt.num_hidden_layers
-        if self.pooling_type == 'max':
-            self.dense = nn.Linear(len(self.ngram), 2)
-        elif self.pooling_type == 'average':
-            self.dense = nn.Linear(len(self.ngram), 2)
-        elif self.pooling_type == 'none':
-            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
-        elif self.pooling_type == 'max_col':
-            self.dense = nn.Linear(2*self.num_measurements, 2)
-        elif self.pooling_type == 'average_col':
-            self.dense = nn.Linear(2*self.num_measurements, 2)
-        else:
-            print('Wrong input pooling type -- The default flatten layer is used.')
-            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
+        self.hidden_units = 16
+#        if self.pooling_type == 'max':
+#            self.dense = nn.Linear(len(self.ngram), 2)
+#        elif self.pooling_type == 'average':
+#            self.dense = nn.Linear(len(self.ngram), 2)
+#        elif self.pooling_type == 'none':
+#            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
+#        elif self.pooling_type == 'max_col':
+#            self.dense = nn.Linear(2*self.num_measurements, 2)
+#        elif self.pooling_type == 'average_col':
+#            self.dense = nn.Linear(2*self.num_measurements, 2)
+#        else:
+#            print('Wrong input pooling type -- The default flatten layer is used.')
+#            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
         
     def forward(self, input_seq):
         """
@@ -75,8 +76,12 @@ class MLLM(torch.nn.Module):
                 n_gram_weight = n_gram(weights)
                 n_gram_weight = self.activation(n_gram_weight)
                 [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
-                [seq_embedding_real, seq_embedding_imag] = self.proj_measurement[i]([sentence_embedding_real, sentence_embedding_imag])
-            [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
+                [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
+            
+            real_n_gram_embed = n_gram(seq_embedding_real)
+            imag_n_gram_embed = n_gram(seq_embedding_imag)
+            [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
+#            [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
             mea_operator = None
             if self.use_lexicon_as_measurement:
                 amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
@@ -103,6 +108,8 @@ class MLLM(torch.nn.Module):
             print('Wrong input pooling type -- The default flatten layer is used.')
             probs = torch.flatten(probs, start_dim=1, end_dim=2)
         
-        output = self.dense(probs)
+        probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
+        probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
+        output = nn.Linear(self.hidden_units, 2)(probs)
         
         return output

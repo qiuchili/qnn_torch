@@ -13,11 +13,15 @@ class ComplexMeasurement(torch.nn.Module):
             self.real_kernel = torch.nn.Parameter(torch.eye(embed_dim))
             self.imag_kernel = torch.nn.Parameter(torch.zeros(embed_dim, embed_dim))
         else:
-            self.real_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
-            self.imag_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
+            self.kernel = torch.nn.Parameter(torch.rand(self.units, embed_dim, 2))
+            normalized_kernel = F.normalize(self.kernel.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, embed_dim, 2)
+            self.real_kernel = normalized_kernel[:,:,0]
+            self.imag_kernel = normalized_kernel[:,:,1]
+#            self.real_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
+#            self.imag_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
 
     def forward(self, inputs, measure_operator=None):
-        batch_size = inputs[0].size(0)
+
         input_real = inputs[0]
         input_imag = inputs[1]
         
@@ -33,8 +37,10 @@ class ComplexMeasurement(torch.nn.Module):
         projector_imag = torch.matmul(imag_kernel, real_kernel.transpose(1, 2)) \
             - torch.matmul(real_kernel, imag_kernel.transpose(1, 2))
         # only real part is non-zero
-        output_real = torch.mm(input_real.view(batch_size, self.embed_dim*self.embed_dim), projector_real.view(self.units,self.embed_dim*self.embed_dim).t())\
-            - torch.mm(input_imag.view(batch_size, self.embed_dim*self.embed_dim), projector_imag.view(self.units,self.embed_dim*self.embed_dim).t())
+        # input_real.shape = [batch_size, seq_len, embed_dim, embed_dim] or [batch_size, embed_dim, embed_dim]
+        # projector_real.shape = [num_measurements, embed_dim, embed_dim]
+        output_real = torch.matmul(torch.flatten(input_real, start_dim = -2, end_dim = -1), torch.flatten(projector_real, start_dim = -2, end_dim = -1).t())\
+            - torch.matmul(torch.flatten(input_imag, start_dim = -2, end_dim = -1), torch.flatten(projector_imag, start_dim = -2, end_dim = -1).t())
     
         return output_real
     
@@ -42,10 +48,10 @@ if __name__ == '__main__':
     model = ComplexMeasurement(6, units=3)
     a = torch.randn(5,6,6)
     b = torch.randn(5,6,6)
-
+#
     y_pred = model([a,b])
     print(y_pred.shape)
-    
+#    
     
     
     
