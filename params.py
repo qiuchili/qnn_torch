@@ -3,6 +3,7 @@ import io,re,codecs
 import numpy as np
 import configparser
 import argparse
+
 class Params(object):
     def __init__(self):
         pass

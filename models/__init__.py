@@ -35,7 +35,7 @@ def setup(opt):
     elif opt.network_type == "local_mixture":
         model = LocalMixtureNN(opt)
     elif opt.network_type == "mllm":
-        model = LocalMixtureNN(opt)
+        model = MLLM(opt)
         
     elif opt.network_type == "bert":
         from models.representation.keras.BertFasttext import BERTFastext

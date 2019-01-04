@@ -14,8 +14,9 @@ class NGram(torch.nn.Module):
     e.g. input_shape = (None,10,3) gram_n = 5, axis = 1 ==> output_shape = (None,10,5,3)
     
     '''
-    def __init__(self, gram_n=3, dim=1):
+    def __init__(self, opt, gram_n=3, dim=1):
         super(NGram, self).__init__()
+        self.opt = opt
         self.gram_n = gram_n
         self.dim = dim
         
@@ -24,16 +25,12 @@ class NGram(torch.nn.Module):
         slice_begin_index = 0
         slice_end_index = -1
 
-        seq_len = inputs.size(self.dim)
+        batch_size, seq_len, embed_dim = inputs.shape
         total_padded_len = self.gram_n - 1
-        left_padded_len = int(total_padded_len/2)
-        right_padded_len = total_padded_len - left_padded_len
+        right_padded_len = left_padded_len = int(total_padded_len/2)
         
-        left_padded_range = torch.tensor(np.arange(left_padded_len), dtype=torch.long)
-        left_padded_zeros = torch.zeros_like(torch.index_select(inputs, self.dim, left_padded_range))
-        
-        right_padded_range = torch.tensor(np.arange(right_padded_len), dtype=torch.long)
-        right_padded_zeros = torch.zeros_like(torch.index_select(inputs, self.dim, right_padded_range))
+        left_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim, dtype=torch.float).to(self.opt.device)
+        right_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim, dtype=torch.float).to(self.opt.device)
         
         inputs = torch.cat([left_padded_zeros, inputs, right_padded_zeros], dim=self.dim)
 
@@ -43,7 +40,7 @@ class NGram(torch.nn.Module):
         for i in range(out_n):
             slice_begin_index = i
             slice_end_index = i + self.gram_n
-            slice_index = torch.tensor(np.arange(slice_begin_index, slice_end_index), dtype=torch.long)
+            slice_index = torch.tensor(np.arange(slice_begin_index, slice_end_index), dtype=torch.long).to(self.opt.device)
             l = torch.index_select(inputs, self.dim, index=slice_index)
             list_of_ngrams.append(torch.unsqueeze(l, dim=self.dim+1))
                 

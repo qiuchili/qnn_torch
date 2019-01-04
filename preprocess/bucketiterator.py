@@ -53,8 +53,8 @@ class BucketIterator(object):
     def transformTorch(self,data):
         
         padded_sequences = [pad_sequence(s, maxlen = self.max_sequence_length) for s in data[0]]
-        x_data = torch.Tensor(padded_sequences)
-        y_data = torch.Tensor(data[1])
+        x_data = torch.tensor(padded_sequences)
+        y_data = torch.tensor(data[1])
         return {'X':x_data, 'y':y_data}
     
 #    def transformTorch(self,data):

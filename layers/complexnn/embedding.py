@@ -29,7 +29,7 @@ def AmplitudeEmbedding(embedding_matrix, random_init=True):
                         _weight=torch.tensor(embedding_matrix, dtype=torch.float))
 
 class ComplexEmbedding(torch.nn.Module):
-    def __init__(self, embedding_matrix, sentiment_lexicon=None, freeze=False):
+    def __init__(self, opt, embedding_matrix, sentiment_lexicon=None, freeze=False):
         super(ComplexEmbedding, self).__init__()
         if sentiment_lexicon is None:
             sign_matrix = torch.sign(embedding_matrix)
@@ -38,9 +38,9 @@ class ComplexEmbedding(torch.nn.Module):
             phase_embedding_matrix = math.pi * (1 - sign_matrix) / 2 # based on [0, 2*pi]
             self.phase_embed = nn.Embedding.from_pretrained(phase_embedding_matrix, freeze=freeze)
         else:
-            self.positive_indices = sentiment_lexicon.gt(0.).squeeze(-1).float()
-            self.negative_indices = sentiment_lexicon.lt(0.).squeeze(-1).float()
-            self.sampler = torch.Tensor(sentiment_lexicon.size(0))
+            self.positive_indices = sentiment_lexicon.gt(0.).squeeze(-1).float().to(opt.device)
+            self.negative_indices = sentiment_lexicon.lt(0.).squeeze(-1).float().to(opt.device)
+            self.sampler = torch.Tensor(sentiment_lexicon.size(0)).to(opt.device)
             sentiment_lexicon = 2 * torch.acos(sentiment_lexicon).expand(-1, 50)
             self.amplitude_embed = nn.Embedding.from_pretrained(embedding_matrix, freeze=freeze)
             self.phase_embed = nn.Embedding.from_pretrained(sentiment_lexicon, freeze=freeze)
