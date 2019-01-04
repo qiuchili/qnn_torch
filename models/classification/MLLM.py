@@ -88,26 +88,31 @@ class MLLM(torch.nn.Module):
                 mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
             prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
             
-        probs = torch.stack(prob_list,dim = -1)
-        if self.pooling_type == 'max':
-            # max out the sequence dimension
-            probs,_ = torch.max(probs,1,False)
-        elif self.pooling_type == 'average':
-            # average out the sequence dimension
-            probs = torch.mean(probs,1,False)
-        elif self.pooling_type == 'none':
-            # do nothing at all, flatten
-            probs = torch.flatten(probs, start_dim=1, end_dim=2)
-        elif self.pooling_type == 'max_col':
-            # max out the measurement dimension
-            probs,_ = torch.max(probs,2,False)
-        elif self.pooling_type == 'average_col':
-            # average out the measurement dimension
-            probs = torch.mean(probs,2,False)
-        else:
-            print('Wrong input pooling type -- The default flatten layer is used.')
-            probs = torch.flatten(probs, start_dim=1, end_dim=2)
+        probs_tensor = torch.stack(prob_list,dim = -1)
+        probs_feature = []
+        for one_type in self.pooling_type.split(','):
+            one_type = one_type.strip()
+            if one_type == 'max':
+                # max out the sequence dimension
+                probs,_ = torch.max(probs_tensor,1,False)
+            elif one_type == 'average':
+                # average out the sequence dimension
+                probs = torch.mean(probs_tensor,1,False)
+            elif one_type == 'none':
+                # do nothing at all, flatten
+                probs = torch.flatten(probs_tensor, start_dim=1, end_dim=2)
+            elif one_type == 'max_col':
+                # max out the measurement dimension
+                probs,_ = torch.max(probs_tensor,2,False)
+            elif one_type == 'average_col':
+                # average out the measurement dimension
+                probs = torch.mean(probs_tensor,2,False)
+            else:
+                print('Wrong input pooling type -- The default flatten layer is used.')
+                probs = torch.flatten(probs_tensor, start_dim=1, end_dim=2)
+            probs_feature.append(probs)
         
+        probs = torch.cat(probs_feature, dim = -2)
         probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
         probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
         output = nn.Linear(self.hidden_units, 2)(probs)
