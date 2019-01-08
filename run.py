@@ -11,6 +11,7 @@ import preprocess.embedding
 import torch
 import torch.nn as nn
 import models
+from optimizer.pytorch_optimizer import Vanilla_Unitary
 
 def run(params):
     # Loss and Optimizer
@@ -20,8 +21,10 @@ def run(params):
     model = models.setup(params)
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)
-
+    proj_measurements_params = list(model.proj_measurements.parameters())
+    remaining_params = list(model.parameters())[:-3]+[list(model.parameters())[-1]]
+    optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
+    optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01)
 
     test_x, test_y = params.reader.get_test(iterable = False)
     test_inputs = torch.tensor(test_x).to(params.device)
@@ -34,12 +37,16 @@ def run(params):
         for sample_batched in params.reader.get_train(iterable = True):
             model.train()
             optimizer.zero_grad()
+            optimizer_1.zero_grad()
             inputs = sample_batched['X'].long().to(params.device)
             targets = sample_batched['y'].long().to(params.device)
             outputs = model(inputs)
             loss = criterion(outputs, torch.max(targets, 1)[1])
             loss.backward(retain_graph=True)
             optimizer.step()
+#            print('Updating Projection Layers:')
+            optimizer_1.step()
+            
 
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)

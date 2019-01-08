@@ -66,7 +66,6 @@ class Vanilla_Unitary(Optimizer):
                     continue
                 
                 d_p = p.grad.data #G
-                
                 G = d_p[:,:,0].numpy()+1j* d_p[:,:,1].numpy()               
                 W = p.data[:,:,0].numpy()+1j* p.data[:,:,1].numpy()   
                 
