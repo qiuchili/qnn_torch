@@ -35,7 +35,7 @@ class ComplexProjMeasurement(torch.nn.Module):
         for i in range(seq_len):
             output = self.measurement([chunks_real[i], chunks_imag[i]])
             if self.method == 'sample':
-                sampled_indice = output.multinomial(1).squeeze(1)
+                sampled_indice = output.squeeze(1).multinomial(1).squeeze(1)
                 real_sample = torch.index_select(self.measurement.real_kernel, 0, sampled_indice).unsqueeze(1)
                 imag_sample = torch.index_select(self.measurement.imag_kernel, 0, sampled_indice).unsqueeze(1)
             elif self.method == 'ensemble':

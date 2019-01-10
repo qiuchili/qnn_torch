@@ -66,9 +66,12 @@ class Vanilla_Unitary(Optimizer):
                     continue
                 
                 d_p = p.grad.data #G
-                G = d_p[:,:,0].numpy()+1j* d_p[:,:,1].numpy()               
-                W = p.data[:,:,0].numpy()+1j* p.data[:,:,1].numpy()   
-                
+                if  torch.cuda.is_available() :
+                    G = d_p[:,:,0].cpu().numpy()+1j* d_p[:,:,1].cpu().numpy()               
+                    W = p.data[:,:,0].cpu().numpy()+1j* p.data[:,:,1].cpu().numpy()   
+                else:
+                    G = d_p[:,:,0].numpy()+1j* d_p[:,:,1].numpy()               
+                    W = p.data[:,:,0].numpy()+1j* p.data[:,:,1].numpy()  
                 #A = G^H W - W^H G
                 A_skew = np.matmul(np.matrix.getH(G),W) - np.matmul(np.matrix.getH(W),G)
                 

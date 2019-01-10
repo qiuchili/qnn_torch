@@ -43,6 +43,8 @@ class MLLM(torch.nn.Module):
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
         self.num_hidden_layers = opt.num_hidden_layers
         self.hidden_units = 16
+        
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #        if self.pooling_type == 'max':
 #            self.dense = nn.Linear(len(self.ngram), 2)
 #        elif self.pooling_type == 'average':
@@ -114,7 +116,7 @@ class MLLM(torch.nn.Module):
         
         probs = torch.cat(probs_feature, dim = -2)
         probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
-        probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
-        output = nn.Linear(self.hidden_units, 2)(probs)
+        probs = nn.Linear(probs.shape[-1],self.hidden_units).to(self.device)(probs)
+        output = nn.Linear(self.hidden_units, 2).to(self.device)(probs)
         
         return output
