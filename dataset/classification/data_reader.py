@@ -86,19 +86,15 @@ class DataReader(object):
             x_mask[idx, :lengths[idx]] = 1.0
          # print( x, x_mask)
         return x, x_mask
-    
-    def get_train(self,shuffle = True,iterable=True,max_sequence_length=0):
+
+    def get_train(self, shuffle=True, iterable=True, max_sequence_length=0):
         x = self.datas['train']['X']
         x = [self.embedding.text_to_sequence(sent) for sent in x]
         y = to_categorical(np.asarray(self.datas['train']['y']))
-        
         data = (x,y)
         if max_sequence_length == 0:
             max_sequence_length = self.max_sequence_length
         if iterable:
-#            iterator = BucketIterator(data,batch_size=self.batch_size,shuffle=True,max_sequence_length=max_sequence_length)
-#            for batch in iterator:
-#                yield batch[0],batch[1]
             return BucketIterator(data,batch_size=self.batch_size,shuffle=True,max_sequence_length=max_sequence_length,backend = self.language)
         else: 
             if self.bert_enabled:
@@ -109,7 +105,7 @@ class DataReader(object):
                 return x,y
         
         
-    def get_test(self,shuffle = True,iterable=True,max_sequence_length=0):
+    def get_test(self, shuffle=True, iterable=True, max_sequence_length=0):
         x = self.datas['test']['X']
         x = [self.embedding.text_to_sequence(sent) for sent in x]
         y = to_categorical(np.asarray(self.datas['test']['y']))
@@ -117,9 +113,6 @@ class DataReader(object):
         if max_sequence_length == 0:
             max_sequence_length = self.max_sequence_length
         if iterable:
-#            iterator = BucketIterator(data,batch_size=self.batch_size,shuffle=True,max_sequence_length=max_sequence_length)
-#            for batch in iterator:
-#                yield batch[0],batch[1]
             return BucketIterator(data,batch_size=self.batch_size,shuffle=True,max_sequence_length=max_sequence_length,backend = self.language)
         else: 
             if self.bert_enabled:
@@ -150,6 +143,7 @@ class DataReader(object):
                 x = to_array(x,maxlen = self.max_sequence_length, use_mask = False)
                 return x,y
         
+    
         
     def preprocess(self, data):
         data['X'] = self.preprocessor.run_seq(data['X'],output_type = 'string')
@@ -282,8 +276,6 @@ class SSTDataReader(DataReader):
         dev = self.loadFile(os.path.join(task_dir_path, self.task_name, 'sentiment-dev'))
         test = self.loadFile(os.path.join(task_dir_path, self.task_name, 'sentiment-test'))
 
-#        super().__init__(train, dev, test, nclasses)
-
         super().__init__(train, dev, test, opt, nclasses)
         self.nb_classes = nclasses
 
@@ -355,22 +347,3 @@ class MPQADataReader(BinaryClassificationDataReader):
         pos = self.loadFile(os.path.join(task_path, 'mpqa.pos'))
         neg = self.loadFile(os.path.join(task_path, 'mpqa.neg'))
         super(MPQADataReader,self).__init__(pos, neg, opt, seed)
-
-#def data_reader_initialize(reader_type, datasets_dir):
-#    dir_path = os.path.join(datasets_dir, reader_type)
-#    if(reader_type == 'CR'):
-#        return(CRDataReader(dir_path))
-#    if(reader_type == 'MR'):
-#        return(MRDataReader(dir_path))
-#    if(reader_type == 'SUBJ'):
-#        return(SUBJDataReader(dir_path))
-#    if(reader_type == 'MPQA'):
-#        return(MPQADataReader(dir_path))
-#    if(reader_type == 'SST_2'):
-#        dir_path = os.path.join(datasets_dir, 'SST')
-#        return(SSTDataReader(dir_path, nclasses = 2))
-#    if(reader_type == 'SST_5'):
-#        dir_path = os.path.join(datasets_dir, 'SST')
-#        return(SSTDataReader(dir_path, nclasses = 5))
-#    if(reader_type == 'TREC'):
-#        return(TRECDataReader(dir_path))

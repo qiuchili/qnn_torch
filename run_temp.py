@@ -13,14 +13,11 @@ import models
 from optimizer.pytorch_optimizer import Vanilla_Unitary
 
 def run(params):
-    if params.bert_enabled == True:
-        params.max_sequence_length = 512
-        params.reader.max_sequence_length = 512
     model = models.setup(params)
     model = model.to(params.device)
-    criterion = nn.CrossEntropyLoss()    
+    criterion = nn.CrossEntropyLoss()
+    senti_loss_func = nn.MSELoss()    
     proj_measurements_params = list(model.proj_measurements.parameters())
-    print(len(proj_measurements_params))
     remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
     optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
     optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
@@ -28,7 +25,9 @@ def run(params):
     test_x, test_y = params.reader.get_test(iterable = False)
     test_inputs = torch.tensor(test_x).to(params.device)
     test_targets = torch.tensor(test_y).to(params.device)
-    
+    # multi-task factor
+    gamma = 1.0
+
     for i in range(params.epochs):
         print('epoch: ', i)
         train_accs = []
@@ -39,11 +38,11 @@ def run(params):
             optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
-            outputs = model(inputs).to(params.device)
-            loss = criterion(outputs, torch.max(targets, 1)[1])
+            senti_out, senti_tag, outputs = model(inputs).to(params.device)
+            senti_loss = senti_loss_func(senti_out, senti_tag)
+            loss = criterion(outputs, torch.max(targets, 1)[1]) + gamma*senti_loss
             loss.backward()
             optimizer.step()
-#            print('Updating Projection Layers:')
             optimizer_1.step()
             
 
@@ -69,7 +68,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_multilayer.ini'    # define dataset in the config
+    config_file = 'config/config_qtnet.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
