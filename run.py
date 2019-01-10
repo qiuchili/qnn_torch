@@ -22,7 +22,7 @@ def run(params):
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
     proj_measurements_params = list(model.proj_measurements.parameters())
-    remaining_params = list(model.parameters())[:-3]+[list(model.parameters())[-1]]
+    remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
     optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
     optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
 
