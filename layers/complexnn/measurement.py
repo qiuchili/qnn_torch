@@ -10,14 +10,14 @@ class ComplexMeasurement(torch.nn.Module):
         self.units = units
         self.embed_dim = embed_dim
         if ortho_init:
-            self.kernel = torch.nn.Parameter(torch.stack([torch.eye(embed_dim),torch.zeros(embed_dim, embed_dim)],dim = -1)).to(device)
+            self.kernel = torch.nn.Parameter(torch.stack([torch.eye(embed_dim),torch.zeros(embed_dim, embed_dim)],dim = -1))
 
 #            self.real_kernel = torch.nn.Parameter(torch.eye(embed_dim))
 #            self.imag_kernel = torch.nn.Parameter(torch.zeros(embed_dim, embed_dim))
         else:
             rand_tensor = torch.rand(self.units, self.embed_dim, 2)
             normalized_tensor = F.normalize(rand_tensor.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, self.embed_dim, 2)
-            self.kernel = torch.nn.Parameter(normalized_tensor).to(device)
+            self.kernel = torch.nn.Parameter(normalized_tensor)
 #            self.kernel = F.normalize(self.kernel.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, embed_dim, 2)
 
 #            self.real_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
