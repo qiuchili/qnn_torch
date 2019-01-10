@@ -5,33 +5,36 @@ import torch.nn.functional as F
 import torch.nn
 
 class ComplexMeasurement(torch.nn.Module):
-    def __init__(self, embed_dim, units=5, ortho_init=False):
+    def __init__(self, embed_dim, units=5, ortho_init=False, device = torch.device('cpu')):
         super(ComplexMeasurement, self).__init__()
         self.units = units
         self.embed_dim = embed_dim
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if ortho_init:
             self.kernel = torch.nn.Parameter(torch.stack([torch.eye(embed_dim).to(device),torch.zeros(embed_dim, embed_dim).to(device)],dim = -1))
-            self.real_kernel = self.kernel[:,:,0]
-            self.imag_kernel = self.kernel[:,:,1]
+
 #            self.real_kernel = torch.nn.Parameter(torch.eye(embed_dim))
 #            self.imag_kernel = torch.nn.Parameter(torch.zeros(embed_dim, embed_dim))
         else:
-            self.kernel = torch.nn.Parameter(torch.rand(self.units, embed_dim, 2).to(device))
-            normalized_kernel = F.normalize(self.kernel.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, embed_dim, 2)
-            self.real_kernel = normalized_kernel[:,:,0]
-            self.imag_kernel = normalized_kernel[:,:,1]
+            rand_tensor = torch.rand(self.units, self.embed_dim, 2).to(device)
+            normalized_tensor = F.normalize(rand_tensor.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, self.embed_dim, 2)
+            self.kernel = torch.nn.Parameter(normalized_tensor)
+#            self.kernel = F.normalize(self.kernel.view(self.units, -1), p=2, dim=1, eps=1e-10).view(self.units, embed_dim, 2)
+
+
 #            self.real_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
 #            self.imag_kernel = torch.nn.Parameter(torch.Tensor(self.units, embed_dim))
 
     def forward(self, inputs, measure_operator=None):
-
+        
         input_real = inputs[0]
         input_imag = inputs[1]
         
+        real_kernel = self.kernel[:,:,0]
+        imag_kernel = self.kernel[:,:,1]
         if measure_operator is None:
-            real_kernel = self.real_kernel.unsqueeze(-1)
-            imag_kernel = self.imag_kernel.unsqueeze(-1)
+            real_kernel = real_kernel.unsqueeze(-1)
+            imag_kernel = imag_kernel.unsqueeze(-1)
         else:
             real_kernel = measure_operator[0].unsqueeze(-1)
             imag_kernel = measure_operator[1].unsqueeze(-1)

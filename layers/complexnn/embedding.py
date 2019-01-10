@@ -26,7 +26,8 @@ def AmplitudeEmbedding(embedding_matrix, random_init=True):
 #                        max_norm=1,
 #                        norm_type=2,
                         padding_idx=0,
-                        _weight=torch.tensor(embedding_matrix, dtype=torch.float))
+                        _weight = embedding_matrix.clone().detach().requires_grad_(True))
+#                        _weight=torch.tensor(embedding_matrix, dtype=torch.float))
 
 class ComplexEmbedding(torch.nn.Module):
     def __init__(self, opt, embedding_matrix, sentiment_lexicon=None, freeze=False):

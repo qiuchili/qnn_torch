@@ -20,11 +20,14 @@ class MLLM(torch.nn.Module):
 
         """
         super(MLLM, self).__init__()
+        
+        
+        self.device = opt.device
         self.max_sequence_len = opt.max_sequence_length
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
-        self.ngram = nn.ModuleList([NGram(opt, gram_n = int(n_value)) for n_value in opt.ngram_value.split(',')])
+        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in opt.ngram_value.split(',')])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
@@ -34,17 +37,46 @@ class MLLM(torch.nn.Module):
         self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix, sentiment_lexicon)
         self.l2_norm = L2Norm(dim = -1, keep_dims = True)
         self.l2_normalization = L2Normalization(dim = -1)
-        self.activation = nn.Softmax(dim = -1)
+        self.activation = nn.Softmax(dim = 1)
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
         self.final_mixture = ComplexMixture(use_weights= False)
-        self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim) for i in range(opt.num_hidden_layers)])
-        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
+        self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(opt.num_hidden_layers)])
+        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
         self.num_hidden_layers = opt.num_hidden_layers
         self.hidden_units = 16
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+#        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.feature_num = 0 
+        for one_type in self.pooling_type.split(','):
+            one_type = one_type.strip()
+            if one_type == 'max':
+                # max out the sequence dimension
+                feature_num = 2*self.num_measurements
+            elif one_type == 'average':
+                # average out the sequence dimension
+                feature_num = 2*self.num_measurements
+            elif one_type == 'none':
+                # do nothing at all, flatten
+                feature_num = self.max_sequence_len*2*self.num_measurements
+            elif one_type == 'max_col':
+                # max out the measurement dimension
+                feature_num = self.max_sequence_len
+            elif one_type == 'average_col':
+                # average out the measurement dimension
+                feature_num = self.max_sequence_len
+            else:
+                print('Wrong input pooling type -- The default flatten layer is used.')
+                feature_num = len(self.ngram)*2*self.num_measurements
+            self.feature_num = self.feature_num + feature_num
+            
+        
+        self.dense_1 = nn.Linear(self.feature_num*len(self.ngram), self.hidden_units)
+        self.dense_2 = nn.Linear(self.hidden_units,2)
+
 #        if self.pooling_type == 'max':
 #            self.dense = nn.Linear(len(self.ngram), 2)
 #        elif self.pooling_type == 'average':
@@ -116,7 +148,14 @@ class MLLM(torch.nn.Module):
         
         probs = torch.cat(probs_feature, dim = -2)
         probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
-        probs = nn.Linear(probs.shape[-1],self.hidden_units).to(self.device)(probs)
-        output = nn.Linear(self.hidden_units, 2).to(self.device)(probs)
+
+#        probs = nn.Linear(probs.shape[-1],self.hidden_units).to(self.device)(probs)
+#        output = nn.Linear(self.hidden_units, 2).to(self.device)(probs)
+
+        probs = F.relu(self.dense_1(probs))
+        output = F.softmax(self.dense_2(probs),dim = -1)
+#        probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
+#        output = nn.Linear(self.hidden_units, 2)(probs)
+
         
         return output

@@ -22,9 +22,10 @@ def run(params):
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
     proj_measurements_params = list(model.proj_measurements.parameters())
-    remaining_params = list(model.parameters())[:-3]+[list(model.parameters())[-1]]
+    print(len(proj_measurements_params))
+    remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
     optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
-    optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01)
+    optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
 
     test_x, test_y = params.reader.get_test(iterable = False)
     test_inputs = torch.tensor(test_x).to(params.device)
@@ -38,11 +39,11 @@ def run(params):
             model.train()
             optimizer.zero_grad()
             optimizer_1.zero_grad()
-            inputs = sample_batched['X'].long().to(params.device)
-            targets = sample_batched['y'].long().to(params.device)
-            outputs = model(inputs)
+            inputs = sample_batched['X'].to(params.device)
+            targets = sample_batched['y'].to(params.device)
+            outputs = model(inputs).to(params.device)
             loss = criterion(outputs, torch.max(targets, 1)[1])
-            loss.backward(retain_graph=True)
+            loss.backward()
             optimizer.step()
 #            print('Updating Projection Layers:')
             optimizer_1.step()
