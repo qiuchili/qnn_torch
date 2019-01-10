@@ -14,11 +14,11 @@ class NGram(torch.nn.Module):
     e.g. input_shape = (None,10,3) gram_n = 5, axis = 1 ==> output_shape = (None,10,5,3)
     
     '''
-    def __init__(self, opt, gram_n=3, dim=1):
+    def __init__(self, gram_n=3, dim=1, device = torch.device('cpu')):
         super(NGram, self).__init__()
-        self.opt = opt
         self.gram_n = gram_n
         self.dim = dim
+        self.device = device
         
     def forward(self, inputs):
         
@@ -29,8 +29,8 @@ class NGram(torch.nn.Module):
         total_padded_len = self.gram_n - 1
         right_padded_len = left_padded_len = int(total_padded_len/2)
         
-        left_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim, dtype=torch.float).to(self.opt.device)
-        right_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim, dtype=torch.float).to(self.opt.device)
+        left_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim).to(self.device)
+        right_padded_zeros = torch.zeros(batch_size, right_padded_len, embed_dim).to(self.device)
         
         inputs = torch.cat([left_padded_zeros, inputs, right_padded_zeros], dim=self.dim)
 
@@ -40,7 +40,7 @@ class NGram(torch.nn.Module):
         for i in range(out_n):
             slice_begin_index = i
             slice_end_index = i + self.gram_n
-            slice_index = torch.tensor(np.arange(slice_begin_index, slice_end_index), dtype=torch.long).to(self.opt.device)
+            slice_index = torch.tensor(np.arange(slice_begin_index, slice_end_index), dtype=torch.long).to(self.device)
             l = torch.index_select(inputs, self.dim, index=slice_index)
             list_of_ngrams.append(torch.unsqueeze(l, dim=self.dim+1))
                 

@@ -6,12 +6,12 @@ from optimizer.pytorch_optimizer import Vanilla_Unitary
 from .measurement import ComplexMeasurement
 
 class ComplexProjMeasurement(torch.nn.Module):
-    def __init__(self, opt, embed_dim, method='sample'):
+    def __init__(self, opt, embed_dim, method='sample', device = torch.device('cpu')):
         super(ComplexProjMeasurement, self).__init__()
         self.opt = opt
         self.embed_dim = embed_dim
         self.method = method
-        self.measurement = ComplexMeasurement(embed_dim, units=embed_dim, ortho_init=True)
+        self.measurement = ComplexMeasurement(embed_dim, units=embed_dim, ortho_init=True, device = device)
 
     def forward(self, inputs):
 
@@ -36,8 +36,8 @@ class ComplexProjMeasurement(torch.nn.Module):
             output = self.measurement([chunks_real[i], chunks_imag[i]])
             if self.method == 'sample':
                 sampled_indice = output.multinomial(1).squeeze(1)
-                real_sample = torch.index_select(self.measurement.real_kernel, 0, sampled_indice).unsqueeze(1)
-                imag_sample = torch.index_select(self.measurement.imag_kernel, 0, sampled_indice).unsqueeze(1)
+                real_sample = torch.index_select(self.measurement.kernel[:,:,0], 0, sampled_indice).unsqueeze(1)
+                imag_sample = torch.index_select(self.measurement.kernel[:,:,1], 0, sampled_indice).unsqueeze(1)
             elif self.method == 'ensemble':
                 real_sample = torch.mm(output, self.measurement.real_kernel).unsqueeze(1)
                 imag_sample = torch.mm(output, self.measurement.imag_kernel).unsqueeze(1)

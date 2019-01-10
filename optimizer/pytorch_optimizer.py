@@ -28,11 +28,11 @@ class Vanilla_Unitary(Optimizer):
         and learning rate respectively.
     """
 
-    def __init__(self, params, lr=required):
+    def __init__(self, params, lr=required, device = torch.device('cpu')):
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
 
-
+        self.device = device
         defaults = dict(lr=lr)
         super(Vanilla_Unitary, self).__init__(params, defaults)
 
@@ -66,8 +66,8 @@ class Vanilla_Unitary(Optimizer):
                     continue
                 
                 d_p = p.grad.data #G
-                G = d_p[:,:,0].numpy()+1j* d_p[:,:,1].numpy()               
-                W = p.data[:,:,0].numpy()+1j* p.data[:,:,1].numpy()   
+                G = d_p[:,:,0].cpu().numpy()+1j* d_p[:,:,1].cpu().numpy()               
+                W = p.data[:,:,0].cpu().numpy()+1j* p.data[:,:,1].cpu().numpy()   
                 
                 #A = G^H W - W^H G
                 A_skew = np.matmul(np.matrix.getH(G),W) - np.matmul(np.matrix.getH(W),G)
@@ -78,11 +78,11 @@ class Vanilla_Unitary(Optimizer):
                 cayley_numer = identity - (lr/2)* A_skew
                 W_new = np.matmul(np.matmul(cayley_denom,cayley_numer),W)
                 
-                p_new_real = torch.tensor(W_new.real)
-                p_new_imag = torch.tensor(W_new.imag)
+                p_new_real = torch.tensor(W_new.real, dtype = torch.float).to(self.device)
+                p_new_imag = torch.tensor(W_new.imag, dtype = torch.float).to(self.device)
                 p_new = torch.cat((p_new_real.unsqueeze(2),p_new_imag.unsqueeze(2)),2)
 
-                p.data = p_new.float()
+                p.data = p_new
 
 
         return loss
