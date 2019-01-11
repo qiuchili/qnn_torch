@@ -21,8 +21,6 @@ def setup(opt):
         reader = SSTDataReader(dir_path, opt, nclasses = 5)
     if opt.dataset_name == 'TREC':
         reader = TRECDataReader(opt, dir_path)
-    else:
-        raise NameError('Missing the specified dataset ' + opt.dataset_name + '.')
     return reader
 
 if __name__ == '__main__':
