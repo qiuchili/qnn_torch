@@ -18,7 +18,7 @@ class QTNET(torch.nn.Module):
         self.ngram = NGram(gram_n = 3, device = self.device)
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
-        self.sentiment_lexicon = torch.tensor(opt.sentiment_dic, dtype=torch.float)
+        self.sentiment_lexicon = torch.tensor(opt.sentiment_dic, dtype=torch.float).to(opt.device)
         self.vocab_size = self.embedding_matrix.shape[0]
         self.embedding_dim = self.embedding_matrix.shape[1]
         self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix)
@@ -28,7 +28,7 @@ class QTNET(torch.nn.Module):
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
         self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(opt.num_hidden_layers)])
-        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
+        self.measurement = ComplexMeasurement(self.embedding_dim, units = self.num_measurements,device = self.device)
         self.num_hidden_layers = opt.num_hidden_layers
         self.dense = nn.Linear(self.embedding_dim, 2)
         self.senti_dense = nn.Linear(self.embedding_dim, 1)
@@ -61,6 +61,6 @@ class QTNET(torch.nn.Module):
         senti_out = torch.tanh(flatten_feats)
         indices = torch.flatten(input_seq, -2, -1)
         senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1)
-        max_feats = torch.max(feats, dim=1)
+        max_feats = torch.max(feats, dim=1)[0]
         output = self.dense(max_feats)
         return senti_out, senti_tag, output

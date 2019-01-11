@@ -39,7 +39,7 @@ def run(params):
             optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
-            outputs = model(inputs).to(params.device)
+            outputs = model(inputs)
             loss = criterion(outputs, torch.max(targets, 1)[1])
             loss.backward()
             optimizer.step()

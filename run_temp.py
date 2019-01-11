@@ -32,24 +32,24 @@ def run(params):
         print('epoch: ', i)
         train_accs = []
         losses = []
-        for sample_batched in params.reader.get_train(iterable = True):
+        for batch_i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             model.train()
             optimizer.zero_grad()
             optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
-            senti_out, senti_tag, outputs = model(inputs).to(params.device)
+            senti_out, senti_tag, outputs = model(inputs)
             senti_loss = senti_loss_func(senti_out, senti_tag)
             loss = criterion(outputs, torch.max(targets, 1)[1]) + gamma*senti_loss
             loss.backward()
             optimizer.step()
             optimizer_1.step()
             
-
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
-            print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
+            if batch_i % 50 == 0:
+                print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
             train_accs.append(train_acc)
             losses.append(loss.item())
             
