@@ -46,9 +46,6 @@ class MLLM(torch.nn.Module):
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
         self.num_hidden_layers = opt.num_hidden_layers
         self.hidden_units = 16
-        
-
-#        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.feature_num = 0 
         for one_type in self.pooling_type.split(','):
@@ -76,20 +73,6 @@ class MLLM(torch.nn.Module):
         
         self.dense_1 = nn.Linear(self.feature_num*len(self.ngram), self.hidden_units)
         self.dense_2 = nn.Linear(self.hidden_units,2)
-
-#        if self.pooling_type == 'max':
-#            self.dense = nn.Linear(len(self.ngram), 2)
-#        elif self.pooling_type == 'average':
-#            self.dense = nn.Linear(len(self.ngram), 2)
-#        elif self.pooling_type == 'none':
-#            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
-#        elif self.pooling_type == 'max_col':
-#            self.dense = nn.Linear(2*self.num_measurements, 2)
-#        elif self.pooling_type == 'average_col':
-#            self.dense = nn.Linear(2*self.num_measurements, 2)
-#        else:
-#            print('Wrong input pooling type -- The default flatten layer is used.')
-#            self.dense = nn.Linear(len(self.ngram)*2*self.num_measurements, 2)
         
     def forward(self, input_seq):
         """
@@ -153,7 +136,7 @@ class MLLM(torch.nn.Module):
 #        output = nn.Linear(self.hidden_units, 2).to(self.device)(probs)
 
         probs = F.relu(self.dense_1(probs))
-        output = F.softmax(self.dense_2(probs),dim = -1)
+        output = self.dense_2(probs)
 #        probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
 #        output = nn.Linear(self.hidden_units, 2)(probs)
 
