@@ -35,7 +35,7 @@ def run(params):
         print('epoch: ', i)
         train_accs = []
         losses = []
-        for sample_batched in params.reader.get_train(iterable = True):
+        for _i,sample_batched in enumerate(params.reader.get_train(iterable = True)):
             model.train()
             optimizer.zero_grad()
             optimizer_1.zero_grad()
@@ -52,7 +52,8 @@ def run(params):
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
-            print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
+            if _i %100 ==0:
+                print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
             train_accs.append(train_acc)
             losses.append(loss.item())
             
