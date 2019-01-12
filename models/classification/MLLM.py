@@ -27,6 +27,8 @@ class MLLM(torch.nn.Module):
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
+            
+        self.num_hidden_layers = len(opt.ngram_value.split(','))
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in opt.ngram_value.split(',')])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
@@ -41,10 +43,10 @@ class MLLM(torch.nn.Module):
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
         self.final_mixture = ComplexMixture(use_weights= False)
-        self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(opt.num_hidden_layers)])
+        self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(self.num_hidden_layers)])
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-        self.num_hidden_layers = opt.num_hidden_layers
+#        self.num_hidden_layers = opt.num_hidden_layers
         self.hidden_units = 16
 
         self.feature_num = 0 
@@ -67,11 +69,11 @@ class MLLM(torch.nn.Module):
                 feature_num = self.max_sequence_len
             else:
                 print('Wrong input pooling type -- The default flatten layer is used.')
-                feature_num = len(self.ngram)*2*self.num_measurements
+                feature_num = self.max_sequence_len*2*self.num_measurements
             self.feature_num = self.feature_num + feature_num
             
         
-        self.dense_1 = nn.Linear(self.feature_num*len(self.ngram), self.hidden_units)
+        self.dense_1 = nn.Linear(self.feature_num, self.hidden_units)
         self.dense_2 = nn.Linear(self.hidden_units,2)
         
     def forward(self, input_seq):
@@ -86,24 +88,24 @@ class MLLM(torch.nn.Module):
         amplitude_embedding = self.l2_normalization(amplitude_embedding)
         [seq_embedding_real, seq_embedding_imag] = self.complex_multiply([phase_embedding, amplitude_embedding])
         prob_list = []
-        for n_gram in self.ngram:
-            for i in range(self.num_hidden_layers):
-                real_n_gram_embed = n_gram(seq_embedding_real)
-                imag_n_gram_embed = n_gram(seq_embedding_imag)
-                n_gram_weight = n_gram(weights)
-                n_gram_weight = self.activation(n_gram_weight)
-                [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
-                [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
-            
+        for i in range(self.num_hidden_layers):
+            n_gram = self.ngram[i]
             real_n_gram_embed = n_gram(seq_embedding_real)
             imag_n_gram_embed = n_gram(seq_embedding_imag)
+            n_gram_weight = n_gram(weights)
+            n_gram_weight = self.activation(n_gram_weight)
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
+            [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
+        
+        real_n_gram_embed = n_gram(seq_embedding_real)
+        imag_n_gram_embed = n_gram(seq_embedding_imag)
+        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
 #            [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
-            mea_operator = None
-            if self.use_lexicon_as_measurement:
-                amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
-                mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
-            prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
+        mea_operator = None
+        if self.use_lexicon_as_measurement:
+            amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
+            mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
+        prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
             
         probs_tensor = torch.stack(prob_list,dim = -1)
         probs_feature = []

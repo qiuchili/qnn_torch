@@ -27,8 +27,8 @@ class NGram(torch.nn.Module):
 
         batch_size, seq_len, embed_dim = inputs.shape
         total_padded_len = self.gram_n - 1
-        right_padded_len = left_padded_len = int(total_padded_len/2)
-        
+        left_padded_len = int(total_padded_len/2)
+        right_padded_len = total_padded_len - left_padded_len
         left_padded_zeros = torch.zeros(batch_size, left_padded_len, embed_dim).to(self.device)
         right_padded_zeros = torch.zeros(batch_size, right_padded_len, embed_dim).to(self.device)
         

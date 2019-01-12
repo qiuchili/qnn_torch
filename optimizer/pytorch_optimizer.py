@@ -77,6 +77,7 @@ class Vanilla_Unitary(Optimizer):
                 #A = G^H W - W^H G
                 A_skew = np.matmul(np.matrix.getH(G),W) - np.matmul(np.matrix.getH(W),G)
                 
+                #(A + i*B)^-1 = (A + B*A^-1*B)^-1 - i*(B + A*B^-1*A)^-1
                 #W_new = (I+lr/2 * A)^(-1)*(I-lr/2 * A)*W
                 identity = np.eye(A_skew.shape[0])
                 cayley_denom =  np.linalg.inv(identity + (lr/2)* A_skew)
