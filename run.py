@@ -58,7 +58,8 @@ def run(params):
         avg_train_acc = np.mean(train_accs)
         avg_loss = np.mean(losses)
         print('average train_acc: {}, average train_loss: {}'.format(avg_train_acc, avg_loss))
-        test_outputs = model(test_inputs.long())
+        with torch.no_grad():
+            test_outputs = model(test_inputs.long())
         n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
         n_total = len(test_outputs)
         test_acc = n_correct / n_total
