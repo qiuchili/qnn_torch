@@ -69,10 +69,10 @@ def run(params):
             test_targets = sample_batched['y'].to(params.device)
             with torch.no_grad():
                 test_outputs = model(test_inputs.long())
-            n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
-            n_total = len(test_outputs)
-            test_acc = n_correct / n_total
-            loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
+                n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
+                n_total = len(test_outputs)
+                test_acc = n_correct / n_total
+                loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
             test_accs.append(test_acc)
             test_losses.append(loss.item())
         avg_test_acc = np.mean(test_accs)
