@@ -26,6 +26,7 @@ class DataReader(object):
         self.get_max_sentence_length()
         self.dict_path = os.path.join(self.bert_dir,'vocab.txt')
         self.sentiment_dic = None
+        self.sample_num = {'train': len(self.datas['train']['X']), 'test': len(self.datas['test']['X']),'dev': len(self.datas['dev']['X'])}
         if bool(self.bert_enabled):
             self.dictionary = Dictionary(dict_path =self.dict_path)
             self.sentiment_dic = self.build_sentiment_lexicon()
@@ -42,7 +43,7 @@ class DataReader(object):
         opt.nb_classes = self.nb_classes            
         opt.embedding_size = self.embedding.lookup_table.shape[1]        
         opt.max_sequence_length= self.max_sequence_length
-        
+        opt.sample_num = self.sample_num
         opt.lookup_table = self.embedding.lookup_table     
         opt.sentiment_dic = self.sentiment_dic
         

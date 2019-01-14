@@ -10,6 +10,9 @@ import preprocess.embedding
 import torch
 import torch.nn as nn
 import models
+from tqdm import tqdm,trange
+from random import random, randint
+from time import sleep
 from optimizer.pytorch_optimizer import Vanilla_Unitary
 
 def run(params):
@@ -32,7 +35,13 @@ def run(params):
         print('epoch: ', i)
         train_accs = []
         losses = []
+        
+        t = trange(params.sample_num['train'])
+#	t.set_description('GEN %i' % i)
+	
+#	sleep(0.01)
         for _i,sample_batched in enumerate(params.reader.get_train(iterable = True)):
+            
             model.train()
             optimizer.zero_grad()
             optimizer_1.zero_grad()
@@ -49,8 +58,10 @@ def run(params):
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
-            if _i %100 ==0:
-                print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
+            t.update(params.batch_size)
+            t.set_postfix(loss=loss.item(), train_acc=train_acc)
+#            if _i %100 ==0:
+#                print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
             train_accs.append(train_acc)
             losses.append(loss.item())
             
