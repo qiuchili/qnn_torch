@@ -33,15 +33,15 @@ class ComplexProjMeasurement(torch.nn.Module):
         real_samples = []
         imag_samples = []
         for i in range(seq_len):
-            output = self.measurement([chunks_real[i], chunks_imag[i]])
+            output = self.measurement([chunks_real[i], chunks_imag[i]]).squeeze(1)
             if self.method == 'sample':
-                sampled_indice = output.squeeze(1).multinomial(1).squeeze(1)
+                sampled_indice = output.multinomial(1).squeeze(1)
                 real_sample = torch.index_select(self.measurement.kernel[:,:,0], 0, sampled_indice).unsqueeze(1)
                 imag_sample = torch.index_select(self.measurement.kernel[:,:,1], 0, sampled_indice).unsqueeze(1)
 
             elif self.method == 'ensemble':
-                real_sample = torch.mm(output, self.measurement.real_kernel).unsqueeze(1)
-                imag_sample = torch.mm(output, self.measurement.imag_kernel).unsqueeze(1)
+                real_sample = torch.mm(output, self.measurement.kernel[:,:,0]).unsqueeze(1)
+                imag_sample = torch.mm(output, self.measurement.kernel[:,:,1]).unsqueeze(1)
             real_samples.append(real_sample)
             imag_samples.append(imag_sample)
         real_samples = torch.cat(real_samples, dim=1)
