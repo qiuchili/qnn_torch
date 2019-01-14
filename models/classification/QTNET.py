@@ -31,7 +31,7 @@ class QTNET(torch.nn.Module):
         self.measurement = ComplexMeasurement(self.embedding_dim, units = self.num_measurements,device = self.device)
         self.num_hidden_layers = opt.num_hidden_layers
         self.dense = nn.Linear(self.embedding_dim, 2)
-        self.senti_dense = nn.Linear(self.embedding_dim, 1)
+        self.senti_dense = nn.Linear(self.embedding_dim, 2)
 
     def forward(self, input_seq):
         """
@@ -57,10 +57,10 @@ class QTNET(torch.nn.Module):
         imag_n_gram_embed = self.ngram(seq_embedding_imag)
         [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
         feats = self.measurement([sentence_embedding_real, sentence_embedding_imag])
-        flatten_feats = torch.flatten(self.senti_dense(feats).squeeze(-1), -2, -1)
+        flatten_feats = torch.flatten(self.senti_dense(feats), 0, 1)
         senti_out = torch.tanh(flatten_feats)
         indices = torch.flatten(input_seq, -2, -1)
-        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1)
+        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long()
         max_feats = torch.max(feats, dim=1)[0]
         output = self.dense(max_feats)
         return senti_out, senti_tag, output
