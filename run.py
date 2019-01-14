@@ -30,6 +30,8 @@ def run(params):
     test_x, test_y = params.reader.get_test(iterable = False)
     test_inputs = torch.tensor(test_x).to(params.device)
     test_targets = torch.tensor(test_y).to(params.device)
+    output_file_path = 'output.txt'
+    output_writer = open(output_file_path, 'w')
     
     for i in range(params.epochs):
         print('epoch: ', i)
@@ -37,9 +39,6 @@ def run(params):
         losses = []
         
         t = trange(params.sample_num['train'])
-#	t.set_description('GEN %i' % i)
-	
-#	sleep(0.01)
         for _i,sample_batched in enumerate(params.reader.get_train(iterable = True)):
             
             model.train()
@@ -53,8 +52,6 @@ def run(params):
             optimizer.step()
 #            print('Updating Projection Layers:')
             optimizer_1.step()
-            
-
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
@@ -68,13 +65,17 @@ def run(params):
         avg_train_acc = np.mean(train_accs)
         avg_loss = np.mean(losses)
         print('average train_acc: {}, average train_loss: {}'.format(avg_train_acc, avg_loss))
+        output_writer.write('epoch: {}\n'.format(i))
+        output_writer.write('average train_acc: {}, average train_loss: {}\n'.format(avg_train_acc, avg_loss))
+        
         with torch.no_grad():
             test_outputs = model(test_inputs.long())
         n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
         n_total = len(test_outputs)
         test_acc = n_correct / n_total
         loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
-        print('test_acc: {}, test_loss: {}'.format(test_acc,loss.item()))
+        print('test_acc: {}, test_loss: {}\n\n\n\n'.format(test_acc,loss.item()))
+        output_writer.flush()
 
 
 
