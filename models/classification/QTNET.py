@@ -60,7 +60,7 @@ class QTNET(torch.nn.Module):
         flatten_feats = torch.flatten(self.senti_dense(feats), 0, 1)
         senti_out = torch.tanh(flatten_feats)
         indices = torch.flatten(input_seq, -2, -1)
-        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long()
+        senti_tag = (self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1) / 2
         max_feats = torch.max(feats, dim=1)[0]
         output = self.dense(max_feats)
         return senti_out, senti_tag, output
