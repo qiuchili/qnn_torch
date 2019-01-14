@@ -46,7 +46,6 @@ class MLLM(torch.nn.Module):
         self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(self.num_hidden_layers)])
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-#        self.num_hidden_layers = opt.num_hidden_layers
         self.hidden_units = 16
 
         self.feature_num = 0 
@@ -100,7 +99,6 @@ class MLLM(torch.nn.Module):
         real_n_gram_embed = n_gram(seq_embedding_real)
         imag_n_gram_embed = n_gram(seq_embedding_imag)
         [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
-#            [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
         mea_operator = None
         if self.use_lexicon_as_measurement:
             amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
@@ -134,13 +132,7 @@ class MLLM(torch.nn.Module):
         probs = torch.cat(probs_feature, dim = -2)
         probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
 
-#        probs = nn.Linear(probs.shape[-1],self.hidden_units).to(self.device)(probs)
-#        output = nn.Linear(self.hidden_units, 2).to(self.device)(probs)
-
         probs = F.relu(self.dense_1(probs))
         output = self.dense_2(probs)
-#        probs = nn.Linear(probs.shape[-1],self.hidden_units)(probs)
-#        output = nn.Linear(self.hidden_units, 2)(probs)
-
         
         return output

@@ -27,9 +27,6 @@ def run(params):
     optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
     optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
 
-    test_x, test_y = params.reader.get_test(iterable = False)
-    test_inputs = torch.tensor(test_x).to(params.device)
-    test_targets = torch.tensor(test_y).to(params.device)
     output_file_path = 'output.txt'
     output_writer = open(output_file_path, 'w')
     
@@ -39,7 +36,7 @@ def run(params):
         losses = []
         
         t = trange(params.sample_num['train'])
-        for _i,sample_batched in enumerate(params.reader.get_train(iterable = True)):
+        for _i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             
             model.train()
             optimizer.zero_grad()
@@ -50,15 +47,12 @@ def run(params):
             loss = criterion(outputs, torch.max(targets, 1)[1])
             loss.backward()
             optimizer.step()
-#            print('Updating Projection Layers:')
             optimizer_1.step()
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
             t.update(params.batch_size)
             t.set_postfix(loss=loss.item(), train_acc=train_acc)
-#            if _i %100 ==0:
-#                print('train_acc: {}, loss: {}'.format(train_acc,loss.item()))
             train_accs.append(train_acc)
             losses.append(loss.item())
             
@@ -68,13 +62,23 @@ def run(params):
         output_writer.write('epoch: {}\n'.format(i))
         output_writer.write('average train_acc: {}, average train_loss: {}\n'.format(avg_train_acc, avg_loss))
         
-        with torch.no_grad():
-            test_outputs = model(test_inputs.long())
-        n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
-        n_total = len(test_outputs)
-        test_acc = n_correct / n_total
-        loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
-        print('test_acc: {}, test_loss: {}\n\n\n\n'.format(test_acc,loss.item()))
+        test_accs = []
+        test_losses = []
+        for _i, sample_batched in enumerate(params.reader.get_test(iterable = True)):
+            test_inputs = sample_batched['X'].to(params.device)
+            test_targets = sample_batched['y'].to(params.device)
+            with torch.no_grad():
+                test_outputs = model(test_inputs.long())
+            n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
+            n_total = len(test_outputs)
+            test_acc = n_correct / n_total
+            loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
+            test_accs.append(test_acc)
+            test_losses.append(loss.item())
+        avg_test_acc = np.mean(test_accs)
+        avg_test_loss = np.mean(test_losses)
+        print('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
+        output_writer.write('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
         output_writer.flush()
 
 
