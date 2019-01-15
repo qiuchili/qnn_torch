@@ -37,7 +37,7 @@ class LocalMixtureNN(torch.nn.Module):
         self.mixture = ComplexMixture(use_weights = True)
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-        self.hidden_units = 16
+        self.hidden_units = opt.hidden_units
         
         self.feature_num = 0 
         for one_type in self.pooling_type.split(','):

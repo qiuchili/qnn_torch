@@ -28,8 +28,8 @@ class MLLM(torch.nn.Module):
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
             
-        self.num_hidden_layers = len(opt.ngram_value.split(','))
-        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in opt.ngram_value.split(',')])
+        self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
+        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
@@ -44,7 +44,7 @@ class MLLM(torch.nn.Module):
         self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(self.num_hidden_layers)])
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-        self.hidden_units = 16
+        self.hidden_units = opt.hidden_units
 
         self.feature_num = 0 
         for one_type in self.pooling_type.split(','):
@@ -94,6 +94,8 @@ class MLLM(torch.nn.Module):
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
         
+        n_gram = self.ngram[self.num_hidden_layers]
+        n_gram_weight = n_gram(weights)
         real_n_gram_embed = n_gram(seq_embedding_real)
         imag_n_gram_embed = n_gram(seq_embedding_imag)
         [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])

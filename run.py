@@ -23,14 +23,15 @@ def run(params):
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
     
+    optimizer_1 = None
     if params.network_type == 'mllm':
         proj_measurements_params = list(model.proj_measurements.parameters())
         remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=0.01)
-        optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
+        if len(proj_measurements_params)>0:
+            optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.01, device = params.device)
     else:
         optimizer = torch.optim.RMSprop(list(model.parameters()), lr=0.01)
-        optimizer_1 = None
         
     output_file_path = 'output.txt'
     output_writer = open(output_file_path, 'w')
@@ -45,7 +46,7 @@ def run(params):
             
             model.train()
             optimizer.zero_grad()
-            if params.network_type == 'mllm':
+            if optimizer_1 is not None:
                 optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
@@ -53,7 +54,7 @@ def run(params):
             loss = criterion(outputs, torch.max(targets, 1)[1])
             loss.backward()
             optimizer.step()
-            if params.network_type == 'mllm':
+            if optimizer_1 is not None:
                 optimizer_1.step()
             n_correct = (torch.argmax(outputs, -1) == torch.argmax(targets, -1)).sum().item()
             n_total = len(outputs)
@@ -93,7 +94,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_qdnn.ini'    # define dataset in the config
+    config_file = 'config/config_multilayer.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
