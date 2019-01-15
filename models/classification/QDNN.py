@@ -15,21 +15,20 @@ class QDNN(torch.nn.Module):
         """
         super(QDNN, self).__init__()
         self.max_sequence_len = opt.max_sequence_length
+        self.device = opt.device
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
         self.num_measurements = opt.measurement_size
-        self.embedding_matrix = torch.tensor(opt.lookup_table)
+        self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embedding_dim = self.embedding_matrix.shape[1]
-        self.phase_embedding_layer = PhaseEmbedding(self.max_sequence_len, self.embedding_dim)
-        self.amplitude_embedding_layer = AmplitudeEmbedding(self.embedding_matrix, random_init = False)
-        self.complex_embed = ComplexEmbedding(self.embedding_matrix, sentiment_lexicon)
-        self.l2_norm = L2Norm(dim = -1, keep_dims = False)
+        self.complex_embed = ComplexEmbedding(opt,self.embedding_matrix, sentiment_lexicon)
+        self.l2_norm = L2Norm(dim = -1, keep_dims = True)
         self.l2_normalization = L2Normalization(dim = -1)
-        self.activation = nn.Softmax(dim = -1)
+        self.activation = nn.Softmax(dim = 1)
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
-        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
+        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.dense = nn.Linear(in_features = 2*self.num_measurements, out_features = 2)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
 
@@ -56,7 +55,7 @@ class QDNN(torch.nn.Module):
             mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
         
         output = self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator)
-        output = torch.log10(output)
+#        output = torch.log10(output)
         output = self.dense(output)
 #        output = self.measurement([sentence_embedding_real, sentence_embedding_imag])
         

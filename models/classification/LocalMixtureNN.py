@@ -24,7 +24,7 @@ class LocalMixtureNN(torch.nn.Module):
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
-        self.ngram = [NGram(gram_n = int(n_value)) for n_value in opt.ngram_value.split(',')]
+        self.ngram = [NGram(gram_n = int(n_value),device = self.device) for n_value in opt.ngram_value.split(',')]
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
