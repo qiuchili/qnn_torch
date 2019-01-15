@@ -34,8 +34,6 @@ class MLLM(torch.nn.Module):
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embedding_dim = self.embedding_matrix.shape[1]
-        self.phase_embedding_layer = PhaseEmbedding(self.max_sequence_len, self.embedding_dim)
-        self.amplitude_embedding_layer = AmplitudeEmbedding(self.embedding_matrix, random_init = False)
         self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix, sentiment_lexicon)
         self.l2_norm = L2Norm(dim = -1, keep_dims = True)
         self.l2_normalization = L2Normalization(dim = -1)

@@ -20,25 +20,51 @@ class LocalMixtureNN(torch.nn.Module):
         """
         super(LocalMixtureNN, self).__init__()
         self.max_sequence_len = opt.max_sequence_length
+        self.device = opt.device
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
         self.ngram = [NGram(gram_n = int(n_value)) for n_value in opt.ngram_value.split(',')]
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
-        self.embedding_matrix = torch.tensor(opt.lookup_table)
+        self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embedding_dim = self.embedding_matrix.shape[1]
-        self.phase_embedding_layer = PhaseEmbedding(self.max_sequence_len, self.embedding_dim)
-        self.amplitude_embedding_layer = AmplitudeEmbedding(self.embedding_matrix, random_init = False)
-        self.complex_embed = ComplexEmbedding(self.embedding_matrix, sentiment_lexicon)
-        self.l2_norm = L2Norm(dim = -1, keep_dims = False)
+        self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix, sentiment_lexicon)
+        self.l2_norm = L2Norm(dim = -1, keep_dims = True)
         self.l2_normalization = L2Normalization(dim = -1)
-        self.activation = nn.Softmax(dim = -1)
+        self.activation = nn.Softmax(dim = 1)
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
-        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements)
+        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
+        self.hidden_units = 16
         
+        self.feature_num = 0 
+        for one_type in self.pooling_type.split(','):
+            one_type = one_type.strip()
+            if one_type == 'max':
+                # max out the sequence dimension
+                feature_num = 2*self.num_measurements
+            elif one_type == 'average':
+                # average out the sequence dimension
+                feature_num = 2*self.num_measurements
+            elif one_type == 'none':
+                # do nothing at all, flatten
+                feature_num = self.max_sequence_len*2*self.num_measurements
+            elif one_type == 'max_col':
+                # max out the measurement dimension
+                feature_num = self.max_sequence_len
+            elif one_type == 'average_col':
+                # average out the measurement dimension
+                feature_num = self.max_sequence_len
+            else:
+                print('Wrong input pooling type -- The default flatten layer is used.')
+                feature_num = self.max_sequence_len*2*self.num_measurements
+            self.feature_num = self.feature_num + feature_num
+            
+        
+        self.dense_1 = nn.Linear(len(self.ngram)*self.feature_num, self.hidden_units)
+        self.dense_2 = nn.Linear(self.hidden_units,2)
     def forward(self, input_seq):
         """
         In the forward function we accept a Variable of input data and we must 
@@ -98,12 +124,11 @@ class LocalMixtureNN(torch.nn.Module):
                 probs = torch.flatten(probs, start_dim=1, end_dim=2)
             probs_feature.append(probs)
         
-        output = torch.cat(probs_feature,dim = 1)
-        output = torch.flatten(probs, start_dim=1, end_dim=2)
-#        output = torch.log10(output)
-        
-        output = nn.Linear(in_features = output.shape[-1], out_features = 16)(output)
-        output = nn.Linear(in_features = 16, out_features = 2)(output)
+        probs = torch.cat(probs_feature, dim = -2)
+        probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
+
+        probs = F.relu(self.dense_1(probs))
+        output = self.dense_2(probs)
 #        output = self.measurement([sentence_embedding_real, sentence_embedding_imag])
         
         return output
