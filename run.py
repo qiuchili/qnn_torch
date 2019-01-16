@@ -10,6 +10,7 @@ import preprocess.embedding
 import torch
 import torch.nn as nn
 import models
+
 from tqdm import tqdm,trange
 from random import random, randint
 from time import sleep
@@ -36,12 +37,14 @@ def run(params):
     output_file_path = 'output.txt'
     output_writer = open(output_file_path, 'w')
     
+    t = trange(params.sample_num['train'])
+    
     for i in range(params.epochs):
         print('epoch: ', i)
         train_accs = []
         losses = []
         
-        t = trange(params.sample_num['train'])
+        
         for _i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             
             model.train()
@@ -63,7 +66,9 @@ def run(params):
             t.set_postfix(loss=loss.item(), train_acc=train_acc)
             train_accs.append(train_acc)
             losses.append(loss.item())
-            
+        
+        t.clear()
+        
         avg_train_acc = np.mean(train_accs)
         avg_loss = np.mean(losses)
         print('average train_acc: {}, average train_loss: {}'.format(avg_train_acc, avg_loss))
@@ -88,7 +93,7 @@ def run(params):
         print('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
         output_writer.write('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
         output_writer.flush()
-
+        
 
 
 if __name__=="__main__":
