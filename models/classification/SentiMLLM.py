@@ -63,7 +63,7 @@ class SentiMLLM(torch.nn.Module):
         self.dense_1 = nn.Linear(self.feature_num, self.hidden_units)
         self.dense_2 = nn.Linear(self.hidden_units,2)
         self.senti_dense1 = nn.Linear(self.embedding_dim, self.hidden_units)
-        self.senti_dense2 = nn.Linear(self.embedding_dim, 2)
+        self.senti_dense2 = nn.Linear(self.hidden_units, 2)
 
     def forward(self, input_seq):
         """
