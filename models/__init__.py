@@ -20,7 +20,7 @@ def setup(opt):
 #            from models.classification.pytorch.RealNN import RealNN
         from models.classification.QDNN import QDNN
         from models.classification.MLLM import MLLM
-        from models.classification.QTNET import QTNET
+        from models.classification.SentiMLLM import SentiMLLM
 #            from models.classification.pytorch.ComplexNN import ComplexNN
 #            from models.classification.pytorch.QDNNAblation import QDNNAblation
         from models.classification.LocalMixtureNN import LocalMixtureNN
@@ -37,8 +37,8 @@ def setup(opt):
         model = LocalMixtureNN(opt)
     elif opt.network_type == "mllm":
         model = MLLM(opt)
-    elif opt.network_type == "qtnet":
-        model = QTNET(opt)
+    elif opt.network_type == "sentimllm":
+        model = SentiMLLM(opt)
         
     elif opt.network_type == "bert":
         from models.representation.keras.BertFasttext import BERTFastext
