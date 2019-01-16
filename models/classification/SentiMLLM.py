@@ -16,7 +16,7 @@ class SentiMLLM(torch.nn.Module):
         self.max_sequence_len = opt.max_sequence_length
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
-            self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
+            self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
             
         self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
