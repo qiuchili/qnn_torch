@@ -82,10 +82,13 @@ if __name__=="__main__":
     
     reader = dataset.setup(params)
     params.reader = reader
-    params.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    torch.cuda.manual_seed(77)
-    torch.manual_seed(77)
+    if torch.cuda.is_available():
+        params.device = torch.device('cuda')
+        torch.cuda.manual_seed(params.seed)
+    else:
+        params.device = torch.device('cpu')
+        torch.manual_seed(params.seed)
 
     run(params)
 
