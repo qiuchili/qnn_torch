@@ -99,12 +99,20 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
+    params.seed = 9999
     config_file = 'config/config_multilayer.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
     params.reader = reader
-    params.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+    print(params.seed)
+    if torch.cuda.is_available():
+        params.device = torch.device('cuda')
+        torch.cuda.manual_seed(params.seed)
+    else:
+        params.device = torch.device('cpu')
+        torch.manual_seed(params.seed)
+#        if torch.cuda.is_available() else 'cpu')
+    
     run(params)
 
