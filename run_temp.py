@@ -36,7 +36,7 @@ def run(params):
             targets = sample_batched['y'].to(params.device)
             if params.strategy == 'multi-task':
                 senti_outputs, senti_targets, outputs = model(inputs)
-                loss = criterion(outputs, torch.max(targets, 1)[1]) + 0.2*criterion(senti_outputs, senti_targets)
+                loss = criterion(outputs, torch.max(targets, 1)[1]) + params.gamma*criterion(senti_outputs, senti_targets)
             else:
                 outputs = model(inputs)
                 loss = criterion(outputs, torch.max(targets, 1)[1])
