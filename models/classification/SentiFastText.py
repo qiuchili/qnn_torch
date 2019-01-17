@@ -26,8 +26,13 @@ class SentiFastText(nn.Module):
         x = self.bn(x)  
         output = self.fc(x)
 
-        senti_output = self.senti_fc(embed).flatten(0, 1)
-        indices = text_indices.flatten(-2, -1)
-        senti_target = (self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1) / 2
+        indices = text_indices.flatten(-2, -1) # batch_size*seq_len
+        choices = self.sentiment_lexicon.index_select(0, indices).squeeze(-1) # batch_size*seq_len
+        nonzero_indices = torch.nonzero(choices).squeeze(-1)
+        indices = indices.index_select(0, nonzero_indices)
+        choices = choices.index_select(0, nonzero_indices)
+        masked_embed = self.embed(indices)
+        senti_output = self.senti_fc(masked_embed).flatten(0, 1)
+        senti_target = (choices.long() + 1) / 2
 
         return senti_output, senti_target, output
