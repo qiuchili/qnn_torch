@@ -32,7 +32,7 @@ class SentiFastText(nn.Module):
         indices = indices.index_select(0, nonzero_indices)
         choices = choices.index_select(0, nonzero_indices)
         masked_embed = self.embed(indices)
-        senti_output = self.senti_fc(masked_embed).flatten(0, 1)
+        senti_output = self.senti_fc(masked_embed)
         senti_target = (choices.long() + 1) / 2
 
         return senti_output, senti_target, output

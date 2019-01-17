@@ -64,7 +64,7 @@ def run(params):
             test_targets = sample_batched['y'].to(params.device)
             with torch.no_grad():
                 if params.strategy == 'multi-task':
-                    _, _, test_outputs = model(inputs.long())
+                    _, _, test_outputs = model(test_inputs.long())
                 else:
                     test_outputs = model(test_inputs.long())
                 n_correct += (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
