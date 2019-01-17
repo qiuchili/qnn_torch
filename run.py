@@ -75,23 +75,22 @@ def run(params):
         output_writer.write('epoch: {}\n'.format(i))
         output_writer.write('average train_acc: {}, average train_loss: {}\n'.format(avg_train_acc, avg_loss))
         
-        test_accs = []
         test_losses = []
+        n_correct = 0
+        n_total = 0
         for _i, sample_batched in enumerate(params.reader.get_test(iterable = True)):
             test_inputs = sample_batched['X'].to(params.device)
             test_targets = sample_batched['y'].to(params.device)
             with torch.no_grad():
                 test_outputs = model(test_inputs.long())
-                n_correct = (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
-                n_total = len(test_outputs)
-                test_acc = n_correct / n_total
+                n_correct += (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
+                n_total += len(test_outputs)
                 loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
-            test_accs.append(test_acc)
             test_losses.append(loss.item())
-        avg_test_acc = np.mean(test_accs)
+        test_acc = n_correct / n_total
         avg_test_loss = np.mean(test_losses)
-        print('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
-        output_writer.write('test_acc: {}, test_loss: {}\n\n\n'.format(avg_test_acc, avg_test_loss.item()))
+        print('test_acc: {}, test_loss: {}\n\n\n'.format(test_acc, avg_test_loss.item()))
+        output_writer.write('test_acc: {}, test_loss: {}\n\n\n'.format(test_acc, avg_test_loss.item()))
         output_writer.flush()
         
 

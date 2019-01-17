@@ -17,12 +17,14 @@ def setup(opt):
         print('None')
         
     elif opt.dataset_type == 'classification':
-#            from models.classification.pytorch.RealNN import RealNN
         from models.classification.QDNN import QDNN
         from models.classification.MLLM import MLLM
         from models.classification.SentiMLLM import SentiMLLM
-#            from models.classification.pytorch.ComplexNN import ComplexNN
-#            from models.classification.pytorch.QDNNAblation import QDNNAblation
+        from models.classification.CNN import TextCNN
+        from models.classification.LSTM import TextLSTM
+        from models.classification.FastText import FastText
+        from models.classification.ComplexFastText import ComplexFastText
+        from models.classification.SentiFastText import SentiFastText
         from models.classification.LocalMixtureNN import LocalMixtureNN
     
     
@@ -31,14 +33,20 @@ def setup(opt):
         model = RealNN(opt)
     elif opt.network_type == "qdnn":
         model = QDNN(opt)
-    elif opt.network_type == "complex":
-        model = ComplexNN(opt)
     elif opt.network_type == "local_mixture":
         model = LocalMixtureNN(opt)
     elif opt.network_type == "mllm":
         model = MLLM(opt)
-    elif opt.network_type == "sentimllm":
-        model = SentiMLLM(opt)
+    elif opt.network_type == "cnn":
+        model = TextCNN(opt)
+    elif opt.network_type == "lstm":
+        model = TextLSTM(opt)
+    elif opt.network_type == "fasttext":
+        model = FastText(opt)
+    elif opt.network_type == "complexfasttext":
+        model = ComplexFastText(opt)
+    elif opt.network_type == "sentifasttext":
+        model = SentiFastText(opt) 
         
     elif opt.network_type == "bert":
         from models.representation.keras.BertFasttext import BERTFastext
