@@ -99,24 +99,25 @@ class LocalMixtureNN(torch.nn.Module):
         probs = torch.stack(prob_list,dim = -1)
         probs_feature = []
         for one_type in self.pooling_type.split(','):
-            if self.pooling_type == 'max':
+            one_type = one_type.strip()
+            if one_type == 'max':
 #                probs = GlobalMaxPooling1D()(self.probs)
                 # max out the sequence dimension
                 probs,_ = torch.max(probs,1,False)
                 
-            elif self.pooling_type == 'average':
+            elif one_type == 'average':
                 # average out the sequence dimension
                 probs = torch.mean(probs,1,False)
                 
-            elif self.pooling_type == 'none':
+            elif one_type == 'none':
                 # do nothing at all, flatten
                 probs = torch.flatten(probs, start_dim=1, end_dim=2)
                 
-            elif self.pooling_type == 'max_col':
+            elif one_type == 'max_col':
                 # max out the measurement dimension
                 probs,_ = torch.max(probs,2,False)
                 
-            elif self.pooling_type == 'average_col':
+            elif one_type == 'average_col':
                 # average out the measurement dimension
                 probs = torch.mean(probs,2,False)
             else:
