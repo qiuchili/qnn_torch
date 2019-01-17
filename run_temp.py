@@ -58,7 +58,7 @@ def run(params):
                             t_outputs = model(t_inputs)
                         t_n_correct += (t_outputs.argmax(1) == t_targets.argmax(1)).sum().item()
                         t_n_total += len(t_outputs)
-                test_acc = n_correct / n_total
+                test_acc = t_n_correct /t_n_total
                 if test_acc > max_test_acc:
                     max_test_acc = test_acc
                 print('average train_acc: {}, average train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
