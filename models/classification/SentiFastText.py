@@ -19,7 +19,7 @@ class SentiFastText(nn.Module):
         self.senti_fc = nn.Linear(50, 2)
 
     def forward(self, inp):
-        text_indices = inp[0] 
+        text_indices = inp
         embed = self.embed(text_indices) 
         x = torch.mean(embed, dim=1)
         x = self.linear(x)
