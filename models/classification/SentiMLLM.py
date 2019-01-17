@@ -63,7 +63,7 @@ class SentiMLLM(torch.nn.Module):
         self.dense_1 = nn.Linear(self.feature_num, self.hidden_units)
         self.dense_2 = nn.Linear(self.hidden_units,2)
         self.senti_dense1 = nn.Linear(self.embedding_dim, self.hidden_units)
-        self.senti_dense2 = nn.Linear(self.hidden_units, 2)
+        self.senti_dense2 = nn.Linear(self.hidden_units, 3)
 
     def forward(self, input_seq):
         """
@@ -130,6 +130,6 @@ class SentiMLLM(torch.nn.Module):
         senti_feat = self.senti_dense1(phase_embedding)
         senti_out = torch.flatten(self.senti_dense2(senti_feat), 0, 1)
         indices = torch.flatten(input_seq, -2, -1)
-        senti_tag = (self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1) / 2
+        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1
 
         return senti_out, senti_tag, output
