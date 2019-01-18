@@ -69,7 +69,8 @@ def run(params):
                 if test_acc > max_test_acc:
                     max_test_acc = test_acc
                 print('average_train_acc: {}, average_train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
-    
+        if i % 20 == 0:
+            torch.save(model.state_dict(), 'temp.pkl')
     print('max_test_acc: {}'.format(max_test_acc))
 
 
