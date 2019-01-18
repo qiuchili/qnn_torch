@@ -2,21 +2,26 @@
 
 from params import Params
 import dataset
-from units import to_array, batch_softmax_with_first_item
-import itertools
-import argparse
 import numpy as np
-import preprocess.embedding
 import torch
 import torch.nn as nn
 import models
+from optimizer.pytorch_optimizer import Vanilla_Unitary
 
 def run(params):
     model = models.setup(params)
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
     
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=params.lr)
+    optimizer_1 = None
+    if params.network_type == 'mllm':
+        proj_measurements_params = list(model.proj_measurements.parameters())
+        remaining_params =list(model.parameters())[:-6]+ list(model.parameters())[-6+len(proj_measurements_params):]
+        optimizer = torch.optim.RMSprop(remaining_params, lr=params.lr)
+        if len(proj_measurements_params)>0:
+            optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr=params.lr, device = params.device)
+    else:
+        optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
 
     max_test_acc = 0.
     for i in range(params.epochs):
@@ -36,6 +41,8 @@ def run(params):
                 loss = criterion(outputs, targets.argmax(1))
             loss.backward()
             optimizer.step()
+            if optimizer_1 is not None:
+                optimizer_1.step()
             n_correct = (outputs.argmax(1) == targets.argmax(1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
@@ -58,12 +65,12 @@ def run(params):
                             t_outputs = model(t_inputs)
                         t_n_correct += (t_outputs.argmax(1) == t_targets.argmax(1)).sum().item()
                         t_n_total += len(t_outputs)
-                test_acc = t_n_correct /t_n_total
+                test_acc = t_n_correct / t_n_total
                 if test_acc > max_test_acc:
                     max_test_acc = test_acc
-                print('average train_acc: {}, average train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
+                print('average_train_acc: {}, average_train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
     
-    print('max test_acc: {}'.format(max_test_acc))
+    print('max_test_acc: {}'.format(max_test_acc))
 
 
 

@@ -28,7 +28,7 @@ class MLLM(torch.nn.Module):
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
             
-        self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
+        self.num_hidden_layers = len(str(opt.ngram_value).split(','))
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
@@ -94,11 +94,7 @@ class MLLM(torch.nn.Module):
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
         
-        n_gram = self.ngram[self.num_hidden_layers]
-        n_gram_weight = n_gram(weights)
-        real_n_gram_embed = n_gram(seq_embedding_real)
-        imag_n_gram_embed = n_gram(seq_embedding_imag)
-        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
+        [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
         mea_operator = None
         if self.use_lexicon_as_measurement:
             amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
