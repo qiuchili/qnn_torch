@@ -94,7 +94,7 @@ class MLLM(torch.nn.Module):
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
         
-        [sentence_embedding_real, sentence_embedding_imag] = self.final_mixture([seq_embedding_real, seq_embedding_imag])
+        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag, weights])
         mea_operator = None
         if self.use_lexicon_as_measurement:
             amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
