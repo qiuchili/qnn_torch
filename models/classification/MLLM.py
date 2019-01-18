@@ -102,6 +102,7 @@ class MLLM(torch.nn.Module):
         prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
             
         probs_tensor = torch.stack(prob_list,dim = -1)
+        '''
         probs_feature = []
         for one_type in self.pooling_type.split(','):
             one_type = one_type.strip()
@@ -126,6 +127,7 @@ class MLLM(torch.nn.Module):
             probs_feature.append(probs)
         
         probs = torch.cat(probs_feature, dim = -2)
+        '''
         probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
 
         probs = F.relu(self.dense_1(probs))
