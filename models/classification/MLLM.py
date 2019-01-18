@@ -128,7 +128,7 @@ class MLLM(torch.nn.Module):
         
         probs = torch.cat(probs_feature, dim = -2)
         '''
-        probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
+        probs = torch.flatten(probs_tensor, start_dim = -2, end_dim = -1)
 
         probs = F.relu(self.dense_1(probs))
         output = self.dense_2(probs)
