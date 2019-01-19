@@ -90,7 +90,7 @@ class MLLM(torch.nn.Module):
             real_n_gram_embed = n_gram(seq_embedding_real)
             imag_n_gram_embed = n_gram(seq_embedding_imag)
             n_gram_weight = n_gram(weights)
-            weights = torch.sum(weights, dim=1)
+            weights = torch.sum(n_gram_weight, dim=1)
             n_gram_weight = self.activation(n_gram_weight)
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
