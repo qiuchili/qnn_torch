@@ -16,7 +16,7 @@ def run(params):
     optimizer_1 = None
     if params.network_type == 'mllm':
         proj_measurements_params = list(model.proj_measurements.parameters())
-        remaining_params =list(model.parameters())[:-6]+ list(model.parameters())[-6+len(proj_measurements_params):]
+        remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=params.lr)
         if len(proj_measurements_params)>0:
             optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr=params.lr, device = params.device)
