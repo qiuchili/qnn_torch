@@ -17,7 +17,11 @@ class SentiMLLM(torch.nn.Module):
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
-            
+            vocab_size = self.sentiment_lexicon.shape[0]
+            train_size = int(0.9 * vocab_size)
+            train_indices = torch.randint(0, vocab_size, (train_size, 1))
+            self.train_mask = torch.zeros(vocab_size).scatter_(0, train_indices, 1.0).to(opt.device)
+            self.test_mask = 1 - self.train_mask   
         self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
         self.pooling_type = opt.pooling_type
@@ -63,7 +67,7 @@ class SentiMLLM(torch.nn.Module):
         self.dense_1 = nn.Linear(self.feature_num, self.hidden_units)
         self.dense_2 = nn.Linear(self.hidden_units,2)
         self.senti_dense1 = nn.Linear(self.embedding_dim, self.hidden_units)
-        self.senti_dense2 = nn.Linear(self.hidden_units, 3)
+        self.senti_dense2 = nn.Linear(self.hidden_units, 1)
 
     def forward(self, input_seq):
         """
@@ -127,9 +131,19 @@ class SentiMLLM(torch.nn.Module):
         probs = F.relu(self.dense_1(probs))
         output = self.dense_2(probs)
         
-        senti_feat = self.senti_dense1(phase_embedding)
-        senti_out = torch.flatten(self.senti_dense2(senti_feat), 0, 1)
         indices = torch.flatten(input_seq, -2, -1)
-        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1
-
-        return senti_out, senti_tag, output
+        if self.training:
+            mask = self.train_mask.index_select(0, indices)
+            senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
+            senti_out = torch.sigmoid(senti_feat)
+            senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2 # 0, 1
+            # masked binary cross entropy
+            senti_loss = -torch.sum((senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))*mask)
+            return senti_loss, output
+        else:
+            mask = self.test_mask.index_select(0, indices)
+            senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
+            senti_out = torch.sign(senti_feat)
+            senti_tag = self.sentiment_lexicon.index_select(0, indices).long() # -1, +1
+            senti_acc = torch.sum(senti_out*mask == senti_tag) / len(senti_out)
+            return senti_acc, output

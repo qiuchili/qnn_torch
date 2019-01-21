@@ -16,7 +16,7 @@ def run(params):
     optimizer_1 = None
     if params.network_type == 'mllm':
         proj_measurements_params = list(model.proj_measurements.parameters())
-        remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
+        remaining_params = list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=params.lr)
         if len(proj_measurements_params)>0:
             optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr=params.lr, device = params.device)
@@ -34,8 +34,8 @@ def run(params):
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
             if params.strategy == 'multi-task':
-                senti_outputs, senti_targets, outputs = model(inputs)
-                loss = criterion(outputs, targets.argmax(1)) + params.gamma*criterion(senti_outputs, senti_targets)
+                senti_loss, outputs = model(inputs)
+                loss = criterion(outputs, targets.argmax(1)) + params.gamma*senti_loss
             else:
                 outputs = model(inputs)
                 loss = criterion(outputs, targets.argmax(1))
@@ -60,7 +60,7 @@ def run(params):
                     t_targets = t_sample_batched['y'].to(params.device)
                     with torch.no_grad():
                         if params.strategy == 'multi-task':
-                            _, _, t_outputs = model(t_inputs)
+                            senti_acc, t_outputs = model(t_inputs)
                         else:
                             t_outputs = model(t_inputs)
                         t_n_correct += (t_outputs.argmax(1) == t_targets.argmax(1)).sum().item()

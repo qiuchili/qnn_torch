@@ -28,7 +28,7 @@ class MLLM(torch.nn.Module):
         if sentiment_lexicon is not None:
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
             
-        self.num_hidden_layers = len(str(opt.ngram_value).split(','))
+        self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
@@ -90,13 +90,16 @@ class MLLM(torch.nn.Module):
             real_n_gram_embed = n_gram(seq_embedding_real)
             imag_n_gram_embed = n_gram(seq_embedding_imag)
             n_gram_weight = n_gram(weights)
-            weights = torch.sum(n_gram_weight, dim=1)
+            # weights = torch.sum(n_gram_weight, dim=1)
             n_gram_weight = self.activation(n_gram_weight)
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
 
-        weights = self.activation(weights)
-        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag, weights])
+        n_gram = self.ngram[self.num_hidden_layers]
+        n_gram_weight = n_gram(weights)
+        real_n_gram_embed = n_gram(seq_embedding_real)
+        imag_n_gram_embed = n_gram(seq_embedding_imag)
+        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
         mea_operator = None
         if self.use_lexicon_as_measurement:
             amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
@@ -104,7 +107,7 @@ class MLLM(torch.nn.Module):
         prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
             
         probs_tensor = torch.stack(prob_list,dim = -1)
-        '''
+
         probs_feature = []
         for one_type in self.pooling_type.split(','):
             one_type = one_type.strip()
@@ -129,8 +132,8 @@ class MLLM(torch.nn.Module):
             probs_feature.append(probs)
         
         probs = torch.cat(probs_feature, dim = -2)
-        '''
-        probs = torch.flatten(probs_tensor, start_dim = -2, end_dim = -1)
+  
+        probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
 
         probs = F.relu(self.dense_1(probs))
         output = self.dense_2(probs)

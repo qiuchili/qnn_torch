@@ -53,8 +53,12 @@ def run(params):
                 optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
-            outputs = model(inputs)
-            loss = criterion(outputs, torch.max(targets, 1)[1])
+            if params.strategy == 'multi-task':
+                senti_loss, outputs = model(inputs)
+                loss = criterion(outputs, targets.argmax(1)) + params.gamma*senti_loss
+            else:
+                outputs = model(inputs)
+                loss = criterion(outputs, targets.argmax(1))
             loss.backward()
             optimizer.step()
             if optimizer_1 is not None:
@@ -82,7 +86,10 @@ def run(params):
             test_inputs = sample_batched['X'].to(params.device)
             test_targets = sample_batched['y'].to(params.device)
             with torch.no_grad():
-                test_outputs = model(test_inputs.long())
+                if params.strategy == 'multi-task':
+                    senti_acc, test_outputs = model(test_inputs)
+                else:
+                    test_outputs = model(test_inputs)
                 n_correct += (torch.argmax(test_outputs, -1) == torch.argmax(test_targets, -1)).sum().item()
                 n_total += len(test_outputs)
                 loss = criterion(test_outputs, torch.max(test_targets, 1)[1])
