@@ -82,6 +82,7 @@ def run(params):
         test_losses = []
         n_correct = 0
         n_total = 0
+        model.eval()
         for _i, sample_batched in enumerate(params.reader.get_test(iterable = True)):
             test_inputs = sample_batched['X'].to(params.device)
             test_targets = sample_batched['y'].to(params.device)
