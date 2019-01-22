@@ -135,15 +135,17 @@ class SentiMLLM(torch.nn.Module):
         if self.training:
             mask = self.train_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
-            senti_out = torch.sigmoid(senti_feat)
-            senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2 # 0, 1
+            senti_out = torch.sigmoid(senti_feat)*mask
+            senti_len = torch.sum(senti_out != 0, dim=0)
+            senti_tag = ((self.sentiment_lexicon.index_select(0, indices) + 1) / 2)*mask # 0, 1
             # masked binary cross entropy
-            senti_loss = -torch.sum((senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))*mask)
+            senti_loss = -torch.sum(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out)) / senti_len
             return senti_loss, output
         else:
             mask = self.test_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
-            senti_out = torch.sign(senti_feat)
+            senti_out = torch.sign(senti_feat)*mask
+            senti_len = torch.sum(senti_out != 0, dim=0)
             senti_tag = self.sentiment_lexicon.index_select(0, indices).long() # -1, +1
-            senti_acc = torch.sum(senti_out*mask == senti_tag) / len(senti_out)
+            senti_acc = torch.sum(senti_out == senti_tag) / senti_len
             return senti_acc, output
