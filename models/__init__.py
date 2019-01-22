@@ -37,6 +37,8 @@ def setup(opt):
         model = LocalMixtureNN(opt)
     elif opt.network_type == "mllm":
         model = MLLM(opt)
+    elif opt.network_type == "sentimllm":
+        model = SentiMLLM(opt)
     elif opt.network_type == "cnn":
         model = TextCNN(opt)
     elif opt.network_type == "lstm":

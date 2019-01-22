@@ -25,7 +25,7 @@ def run(params):
     criterion = nn.CrossEntropyLoss()    
     
     optimizer_1 = None
-    if params.network_type == 'mllm':
+    if params.network_type == 'mllm' or params.network_type == 'sentimllm':
         proj_measurements_params = list(model.proj_measurements.parameters())
         remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=0.001)

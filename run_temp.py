@@ -14,9 +14,9 @@ def run(params):
     criterion = nn.CrossEntropyLoss()    
     
     optimizer_1 = None
-    if params.network_type == 'mllm':
+    if params.network_type == 'mllm' or params.network_type == 'sentimllm':
         proj_measurements_params = list(model.proj_measurements.parameters())
-        remaining_params = list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
+        remaining_params = list(model.parameters())[:-10]+ list(model.parameters())[-10+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=params.lr)
         if len(proj_measurements_params)>0:
             optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr=params.lr, device = params.device)
@@ -31,6 +31,8 @@ def run(params):
         for _i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             model.train()
             optimizer.zero_grad()
+            if optimizer_1 is not None:
+                optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
             if params.strategy == 'multi-task':
@@ -55,20 +57,25 @@ def run(params):
                 avg_train_loss = np.mean(train_losses)
                 t_n_correct = 0
                 t_n_total = 0
+                senti_acc = 0
+                cnt = 0
                 for t_sample_batched in params.reader.get_test(iterable = True):
                     t_inputs = t_sample_batched['X'].to(params.device)
                     t_targets = t_sample_batched['y'].to(params.device)
+                    cnt += 1
                     with torch.no_grad():
                         if params.strategy == 'multi-task':
-                            senti_acc, t_outputs = model(t_inputs)
+                            senti_acc_, t_outputs = model(t_inputs)
                         else:
                             t_outputs = model(t_inputs)
                         t_n_correct += (t_outputs.argmax(1) == t_targets.argmax(1)).sum().item()
                         t_n_total += len(t_outputs)
+                        senti_acc += senti_acc_.item()
                 test_acc = t_n_correct / t_n_total
+                senti_acc /= cnt
                 if test_acc > max_test_acc:
                     max_test_acc = test_acc
-                print('average_train_acc: {}, average_train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
+                print('average_train_acc: {}, average_train_loss: {}, test_acc: {}, senti_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc, senti_acc))
         if i % 20 == 0:
             torch.save(model.state_dict(), 'temp.pkl')
     print('max_test_acc: {}'.format(max_test_acc))
