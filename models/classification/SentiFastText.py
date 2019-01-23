@@ -16,7 +16,7 @@ class SentiFastText(nn.Module):
         self.linear = nn.Linear(50, 200)
         self.bn = nn.BatchNorm1d(200)
         self.fc = nn.Linear(200, 2)
-        self.senti_fc = nn.Linear(50, 3)
+        self.senti_fc = nn.Linear(50, 1)
 
     def forward(self, inp):
         text_indices = inp
@@ -26,8 +26,15 @@ class SentiFastText(nn.Module):
         x = self.bn(x)  
         output = self.fc(x)
 
-        senti_out = self.senti_fc(embed).flatten(0, 1)
-        indices = text_indices.flatten(-2, -1)
-        senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long() + 1
-        senti_loss = -torch.sum(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))
-        return senti_loss, output
+        if self.training:
+            senti_out = torch.sigmoid(self.senti_fc(embed).flatten(0, 1))
+            indices = text_indices.flatten(-2, -1)
+            senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
+            senti_loss = -torch.sum(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out)) / len(senti_out)
+            return senti_loss, output
+        else:
+            senti_out = torch.sign(self.senti_fc(embed).flatten(0, 1))
+            indices = text_indices.flatten(-2, -1)
+            senti_tag = self.sentiment_lexicon.index_select(0, indices)
+            senti_acc = torch.sum(senti_out == senti_tag).float() / len(senti_out)
+            return senti_acc, output
