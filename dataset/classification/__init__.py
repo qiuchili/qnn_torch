@@ -20,7 +20,7 @@ def setup(opt):
         dir_path = os.path.join(opt.datasets_dir, 'SST')
         reader = SSTDataReader(dir_path, opt, nclasses = 5)
     if opt.dataset_name == 'TREC':
-        reader = TRECDataReader(opt, dir_path)
+        reader = TRECDataReader(dir_path, opt)
     return reader
 
 if __name__ == '__main__':

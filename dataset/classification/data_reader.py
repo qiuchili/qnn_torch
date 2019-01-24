@@ -235,13 +235,13 @@ class DataReader(object):
 
 
 class TRECDataReader(DataReader):
-    def __init__(self, task_dir_path, preprocessor, seed=1111):
+    def __init__(self, task_dir_path, opt, seed=1111):
         self.seed = seed
         train = self.loadFile(os.path.join(task_dir_path, 'train_5500.label'))
         train, dev = self.train_dev_split(train, train_dev_ratio = 1/9)
         test = self.loadFile(os.path.join(task_dir_path, 'TREC_10.label'))
         nb_classes = 6
-        super(TRECDataReader,self).__init__(train, dev, test, nb_classes, preprocessor)
+        super(TRECDataReader,self).__init__(train, dev, test, opt, nb_classes)
         self.nb_classes = nb_classes
 
     def train_dev_split(self, samples, train_dev_ratio = 1/9):
