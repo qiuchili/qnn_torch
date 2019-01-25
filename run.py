@@ -44,7 +44,6 @@ def run(params):
         train_accs = []
         losses = []
         
-        
         for _i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             
             model.train()
@@ -104,22 +103,33 @@ def run(params):
 
 
 if __name__=="__main__":
-  
+    grid_parameters ={
+        #"dataset_name":["SST_2"],
+        "measurement_size" :[10,20,30],#,50100],
+        "ngram_value": ["2","3","5","2,3","2,5","3,5","2,3,5"]
+    }
+#    parameters= [arg for index,arg in enumerate(itertools.product(*grid_parameters.values())) if index%args.gpu_num==args.gpu]
+    parameters= [arg for index,arg in (enumerate(itertools.product(*grid_parameters.values())))]
+    parameters= parameters[::-1]
+    
     params = Params()
     params.seed = 9999
-    config_file = 'config/config_multilayer.ini'    # define dataset in the config
-    params.parse_config(config_file)    
-    
-    reader = dataset.setup(params)
-    params.reader = reader
-    print(params.seed)
     if torch.cuda.is_available():
         params.device = torch.device('cuda')
         torch.cuda.manual_seed(params.seed)
     else:
         params.device = torch.device('cpu')
         torch.manual_seed(params.seed)
-#        if torch.cuda.is_available() else 'cpu')
+    config_file = 'config/config_multilayer.ini'    # define dataset in the config
+    params.parse_config(config_file)  
     
-    run(params)
+    for parameter in parameters:
+        print(parameter)
+        params.setup(zip(grid_parameters.keys(),parameter))
+        reader = dataset.setup(params)
+        params.reader = reader
+        
+    #        if torch.cuda.is_available() else 'cpu')
+        
+        run(params)
 
