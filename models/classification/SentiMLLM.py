@@ -8,20 +8,22 @@ import dataset
 import argparse
 from params import Params
 
-
 class SentiMLLM(torch.nn.Module):
     def __init__(self, opt):
         super(SentiMLLM, self).__init__()
         self.device = opt.device
         self.max_sequence_len = opt.max_sequence_length
         sentiment_lexicon = opt.sentiment_dic
+        self.n_fold = opt.n_fold
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
-            vocab_size = self.sentiment_lexicon.shape[0]
-            train_size = int(0.9 * vocab_size)
-            train_indices = torch.randint(0, vocab_size, (train_size, 1))
-            self.train_mask = torch.zeros(vocab_size, 1).scatter_(0, train_indices, 1.0).to(opt.device)
-            self.test_mask = 1 - self.train_mask   
+            self.vocab_size = self.sentiment_lexicon.shape[0]
+            test_size = int(1/self.n_fold*self.vocab_size)
+            perm_indices = torch.randperm(self.vocab_size)
+            self.cnt = 0
+            self.test_indice_list = [perm_indices[n*test_size:(n+1)*test_size] for n in range(self.n_fold)]
+            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt], 1.0).to(opt.device)
+            self.train_mask = 1 - self.test_mask   
         self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
         self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
         self.pooling_type = opt.pooling_type
@@ -148,4 +150,8 @@ class SentiMLLM(torch.nn.Module):
             senti_len = torch.sum(senti_out != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices) # -1, +1
             senti_acc = torch.sum(senti_out == senti_tag).float() / senti_len
+            self.cnt += 1
+            self.cnt %= self.n_fold
+            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt], 1.0).to(self.device)
+            self.train_mask = 1 - self.test_mask
             return senti_acc, output
