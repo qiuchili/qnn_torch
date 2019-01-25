@@ -18,7 +18,7 @@ class SentiMLLM(torch.nn.Module):
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
             self.vocab_size = self.sentiment_lexicon.shape[0]
-            test_size = int(0.1*self.vocab_size)
+            test_size = int(1/self.n_fold*self.vocab_size)
             perm_indices = torch.randperm(self.vocab_size)
             self.cnt = 0
             self.test_indice_list = [perm_indices[n*test_size:(n+1)*test_size] for n in range(self.n_fold)]
