@@ -42,7 +42,7 @@ class ComplexEmbedding(torch.nn.Module):
             self.positive_indices = sentiment_lexicon.gt(0.).squeeze(-1).float().to(opt.device)
             self.negative_indices = sentiment_lexicon.lt(0.).squeeze(-1).float().to(opt.device)
             self.sampler = torch.Tensor(sentiment_lexicon.size(0)).to(opt.device)
-            sentiment_lexicon = 2 * torch.acos(sentiment_lexicon).expand(-1, 50)
+            sentiment_lexicon = 2 * torch.acos(sentiment_lexicon).expand(-1, opt.embedding_size)
             self.amplitude_embed = nn.Embedding.from_pretrained(embedding_matrix, freeze=freeze)
             self.phase_embed = nn.Embedding.from_pretrained(sentiment_lexicon, freeze=freeze)
 

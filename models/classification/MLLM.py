@@ -29,7 +29,7 @@ class MLLM(torch.nn.Module):
             sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float)
             
         self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
-        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
+        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',') if len(n_value)>0 ])
         self.pooling_type = opt.pooling_type
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
