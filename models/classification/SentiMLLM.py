@@ -42,32 +42,7 @@ class SentiMLLM(torch.nn.Module):
         self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
         self.hidden_units = opt.hidden_units
 
-        self.feature_num = 0 
-        for one_type in self.pooling_type.split(','):
-            one_type = one_type.strip()
-            if one_type == 'max':
-                # max out the sequence dimension
-                feature_num = 2*self.num_measurements
-            elif one_type == 'average':
-                # average out the sequence dimension
-                feature_num = 2*self.num_measurements
-            elif one_type == 'none':
-                # do nothing at all, flatten
-                feature_num = self.max_sequence_len*2*self.num_measurements
-            elif one_type == 'max_col':
-                # max out the measurement dimension
-                feature_num = self.max_sequence_len
-            elif one_type == 'average_col':
-                # average out the measurement dimension
-                feature_num = self.max_sequence_len
-            else:
-                print('Wrong input pooling type -- The default flatten layer is used.')
-                feature_num = self.max_sequence_len*2*self.num_measurements
-            self.feature_num = self.feature_num + feature_num
-            
-        
-        self.dense_1 = nn.Linear(self.feature_num, self.hidden_units)
-        self.dense_2 = nn.Linear(self.hidden_units,2)
+        self.dense = nn.Linear(self.num_measurements,2)
         self.senti_dense1 = nn.Linear(self.embedding_dim, self.hidden_units)
         self.senti_dense2 = nn.Linear(self.hidden_units, 1)
 
@@ -82,7 +57,6 @@ class SentiMLLM(torch.nn.Module):
         weights = self.l2_norm(amplitude_embedding)
         amplitude_embedding = self.l2_normalization(amplitude_embedding)
         [seq_embedding_real, seq_embedding_imag] = self.complex_multiply([phase_embedding, amplitude_embedding])
-        prob_list = []
         for i in range(self.num_hidden_layers):
             n_gram = self.ngram[i]
             real_n_gram_embed = n_gram(seq_embedding_real)
@@ -92,46 +66,14 @@ class SentiMLLM(torch.nn.Module):
             [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
             [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
         
-        n_gram = self.ngram[self.num_hidden_layers]
-        n_gram_weight = n_gram(weights)
-        real_n_gram_embed = n_gram(seq_embedding_real)
-        imag_n_gram_embed = n_gram(seq_embedding_imag)
-        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
+        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag, weights])
         mea_operator = None
         if self.use_lexicon_as_measurement:
             amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
             mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
-        prob_list.append(self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator))
-            
-        probs_tensor = torch.stack(prob_list,dim = -1)
-        probs_feature = []
-        for one_type in self.pooling_type.split(','):
-            one_type = one_type.strip()
-            if one_type == 'max':
-                # max out the sequence dimension
-                probs,_ = torch.max(probs_tensor,1,False)
-            elif one_type == 'average':
-                # average out the sequence dimension
-                probs = torch.mean(probs_tensor,1,False)
-            elif one_type == 'none':
-                # do nothing at all, flatten
-                probs = torch.flatten(probs_tensor, start_dim=1, end_dim=2)
-            elif one_type == 'max_col':
-                # max out the measurement dimension
-                probs,_ = torch.max(probs_tensor,2,False)
-            elif one_type == 'average_col':
-                # average out the measurement dimension
-                probs = torch.mean(probs_tensor,2,False)
-            else:
-                print('Wrong input pooling type -- The default flatten layer is used.')
-                probs = torch.flatten(probs_tensor, start_dim=1, end_dim=2)
-            probs_feature.append(probs)
+        output = self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator)
         
-        probs = torch.cat(probs_feature, dim = -2)
-        probs = torch.flatten(probs, start_dim = -2, end_dim = -1)
-
-        probs = F.relu(self.dense_1(probs))
-        output = self.dense_2(probs)
+        output = self.dense(output)
         
         indices = torch.flatten(input_seq, -2, -1)
         if self.training:
