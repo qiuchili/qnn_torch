@@ -2,7 +2,6 @@
 import torch
 import torch.nn.functional as F
 import torch.nn
-from optimizer.pytorch_optimizer import Vanilla_Unitary
 from .measurement import ComplexMeasurement
 
 class ComplexProjMeasurement(torch.nn.Module):

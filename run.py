@@ -14,7 +14,7 @@ import models
 from tqdm import tqdm,trange
 from random import random, randint
 from time import sleep
-from optimizer.pytorch_optimizer import Vanilla_Unitary
+from optimizer import *
 
 def run(params):
     if params.bert_enabled == True:
@@ -30,7 +30,7 @@ def run(params):
         remaining_params =list(model.parameters())[:-7]+ list(model.parameters())[-7+len(proj_measurements_params):]
         optimizer = torch.optim.RMSprop(remaining_params, lr=0.001)
         if len(proj_measurements_params)>0:
-            optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr = 0.001, device = params.device)
+            optimizer_1 = SGD_Unitary(proj_measurements_params,lr = params.lr, lr_unitary = params.lr_unitary, device = params.device)
     else:
         optimizer = torch.optim.RMSprop(list(model.parameters()), lr=0.001)
         
@@ -105,8 +105,10 @@ def run(params):
 if __name__=="__main__":
     grid_parameters ={
         #"dataset_name":["SST_2"],
-        "measurement_size" :[10,20,30],#,50100],
-        "ngram_value": ["2","3","5","2,3","2,5","3,5","2,3,5"]
+        "measurement_size" :[50],
+        "ngram_value": ["3,5"],#"2","3","5","2,3","2,5","3,5","2,3,5","2,3,5,7"],
+        "batch_size":[64],
+        "epochs":[60]
     }
 #    parameters= [arg for index,arg in enumerate(itertools.product(*grid_parameters.values())) if index%args.gpu_num==args.gpu]
     parameters= [arg for index,arg in (enumerate(itertools.product(*grid_parameters.values())))]
