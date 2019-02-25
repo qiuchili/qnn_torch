@@ -19,7 +19,7 @@ def setup(opt):
     elif opt.dataset_type == 'classification':
         from models.classification.QDNN import QDNN
         from models.classification.MLLM import MLLM
-        from models.classification.SentiMLLM import SentiMLLM
+        from models.classification.SentiQDNN import SentiQDNN
         from models.classification.CNN import TextCNN
         from models.classification.LSTM import TextLSTM
         from models.classification.FastText import FastText
@@ -37,8 +37,8 @@ def setup(opt):
         model = LocalMixtureNN(opt)
     elif opt.network_type == "mllm":
         model = MLLM(opt)
-    elif opt.network_type == "sentimllm":
-        model = SentiMLLM(opt)
+    elif opt.network_type == "sentiqdnn":
+        model = SentiQDNN(opt)
     elif opt.network_type == "cnn":
         model = TextCNN(opt)
     elif opt.network_type == "lstm":

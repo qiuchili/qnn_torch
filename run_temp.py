@@ -6,22 +6,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import models
-from optimizer.pytorch_optimizer import Vanilla_Unitary
 
 def run(params):
     model = models.setup(params)
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()    
     
-    optimizer_1 = None
-    if params.network_type == 'mllm' or params.network_type == 'sentimllm':
-        proj_measurements_params = list(model.proj_measurements.parameters())
-        remaining_params = list(model.parameters())[:-10]+ list(model.parameters())[-10+len(proj_measurements_params):]
-        optimizer = torch.optim.RMSprop(remaining_params, lr=params.lr)
-        if len(proj_measurements_params)>0:
-            optimizer_1 = Vanilla_Unitary(proj_measurements_params,lr=params.lr, device = params.device)
-    else:
-        optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
+    optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
 
     max_test_acc = 0.
     for i in range(params.epochs):
@@ -31,8 +22,6 @@ def run(params):
         for _i, sample_batched in enumerate(params.reader.get_train(iterable = True)):
             model.train()
             optimizer.zero_grad()
-            if optimizer_1 is not None:
-                optimizer_1.zero_grad()
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
             if params.strategy == 'multi-task':
@@ -43,8 +32,6 @@ def run(params):
                 loss = criterion(outputs, targets.argmax(1))
             loss.backward()
             optimizer.step()
-            if optimizer_1 is not None:
-                optimizer_1.step()
             n_correct = (outputs.argmax(1) == targets.argmax(1)).sum().item()
             n_total = len(outputs)
             train_acc = n_correct / n_total
@@ -85,7 +72,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_sentimllm.ini'    # define dataset in the config
+    config_file = 'config/config_senti.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)

@@ -8,9 +8,9 @@ import dataset
 import argparse
 from params import Params
 
-class SentiMLLM(torch.nn.Module):
+class SentiQDNN(torch.nn.Module):
     def __init__(self, opt):
-        super(SentiMLLM, self).__init__()
+        super(SentiQDNN, self).__init__()
         self.device = opt.device
         self.max_sequence_len = opt.max_sequence_length
         sentiment_lexicon = opt.sentiment_dic
@@ -39,12 +39,9 @@ class SentiMLLM(torch.nn.Module):
         self.final_mixture = ComplexMixture(use_weights= False)
         self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(self.num_hidden_layers)])
         self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
-        self.use_lexicon_as_measurement = opt.use_lexicon_as_measurement
-        self.hidden_units = opt.hidden_units
 
         self.dense = nn.Linear(self.num_measurements,2)
-        self.senti_dense1 = nn.Linear(self.embedding_dim, self.hidden_units)
-        self.senti_dense2 = nn.Linear(self.hidden_units, 1)
+        self.senti_dense = nn.Linear(self.embedding_dim, 1)
 
     def forward(self, input_seq):
         """
@@ -56,29 +53,17 @@ class SentiMLLM(torch.nn.Module):
         amplitude_embedding, phase_embedding  = self.complex_embed(input_seq)
         weights = self.l2_norm(amplitude_embedding)
         amplitude_embedding = self.l2_normalization(amplitude_embedding)
+        weights = self.activation(weights)
         [seq_embedding_real, seq_embedding_imag] = self.complex_multiply([phase_embedding, amplitude_embedding])
-        for i in range(self.num_hidden_layers):
-            n_gram = self.ngram[i]
-            real_n_gram_embed = n_gram(seq_embedding_real)
-            imag_n_gram_embed = n_gram(seq_embedding_imag)
-            n_gram_weight = n_gram(weights)
-            n_gram_weight = self.activation(n_gram_weight)
-            [sentence_embedding_real, sentence_embedding_imag] = self.mixture([real_n_gram_embed, imag_n_gram_embed, n_gram_weight])
-            [seq_embedding_real, seq_embedding_imag] = self.proj_measurements[i]([sentence_embedding_real, sentence_embedding_imag])
+        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag,weights])
         
-        [sentence_embedding_real, sentence_embedding_imag] = self.mixture([seq_embedding_real, seq_embedding_imag, weights])
-        mea_operator = None
-        if self.use_lexicon_as_measurement:
-            amplitude_measure_operator, phase_measure_operator = self.complex_embed.sample(self.num_measurements)
-            mea_operator = self.complex_multiply([phase_measure_operator, amplitude_measure_operator])
-        output = self.measurement([sentence_embedding_real, sentence_embedding_imag], measure_operator=mea_operator)
-        
+        output = self.measurement([sentence_embedding_real, sentence_embedding_imag])
         output = self.dense(output)
         
         indices = torch.flatten(input_seq, -2, -1)
         if self.training:
             mask = self.train_mask.index_select(0, indices)
-            senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
+            senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
             senti_out = torch.sigmoid(senti_feat)
             senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
             senti_tag = ((self.sentiment_lexicon.index_select(0, indices) + 1) / 2) # 0, 1
@@ -87,7 +72,7 @@ class SentiMLLM(torch.nn.Module):
             return senti_loss, output
         else:
             mask = self.test_mask.index_select(0, indices)
-            senti_feat = torch.flatten(self.senti_dense2(self.senti_dense1(phase_embedding)), 0, 1)
+            senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
             senti_out = torch.sign(senti_feat)*mask
             senti_len = torch.sum(senti_out != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices) # -1, +1
