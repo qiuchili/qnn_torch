@@ -18,15 +18,12 @@ class SentiQDNN(torch.nn.Module):
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
             self.vocab_size = self.sentiment_lexicon.shape[0]
-            test_size = int(1/self.n_fold*self.vocab_size)
+            test_size = int(self.vocab_size/self.n_fold)
             perm_indices = torch.randperm(self.vocab_size)
             self.cnt = 0
             self.test_indice_list = [perm_indices[n*test_size:(n+1)*test_size] for n in range(self.n_fold)]
-            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt], 1.0).to(opt.device)
-            self.train_mask = 1 - self.test_mask   
-        self.num_hidden_layers = len(str(opt.ngram_value).split(','))-1
-        self.ngram = nn.ModuleList([NGram(gram_n = int(n_value),device = self.device) for n_value in str(opt.ngram_value).split(',')])
-        self.pooling_type = opt.pooling_type
+            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(opt.device)
+            self.train_mask = 1 - self.test_mask 
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embedding_dim = self.embedding_matrix.shape[1]
@@ -36,11 +33,8 @@ class SentiQDNN(torch.nn.Module):
         self.activation = nn.Softmax(dim = 1)
         self.complex_multiply = ComplexMultiply()
         self.mixture = ComplexMixture(use_weights = True)
-        self.final_mixture = ComplexMixture(use_weights= False)
-        self.proj_measurements = nn.ModuleList([ComplexProjMeasurement(opt, self.embedding_dim, device = self.device) for i in range(self.num_hidden_layers)])
-        self.measurement = ComplexMeasurement(self.embedding_dim, units = 2*self.num_measurements,device = self.device)
-
-        self.dense = nn.Linear(self.num_measurements,2)
+        self.measurement = ComplexMeasurement(self.embedding_dim, units = self.num_measurements,device = self.device)
+        self.dense = nn.Linear(self.num_measurements, 2)
         self.senti_dense = nn.Linear(self.embedding_dim, 1)
 
     def forward(self, input_seq):
@@ -64,21 +58,20 @@ class SentiQDNN(torch.nn.Module):
         if self.training:
             mask = self.train_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
-            senti_out = torch.sigmoid(senti_feat)
+            senti_out = torch.tanh(senti_feat)
             senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
-            senti_tag = ((self.sentiment_lexicon.index_select(0, indices) + 1) / 2) # 0, 1
-            # masked binary cross entropy
-            senti_loss = -torch.sum((senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))*mask) / senti_len
+            senti_tag = self.sentiment_lexicon.index_select(0, indices) + 1)  # -1, +1
+            senti_loss = torch.sum(((senti_tag-senti_out)**2)*mask) / senti_len
             return senti_loss, output
         else:
             mask = self.test_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
-            senti_out = torch.sign(senti_feat)*mask
-            senti_len = torch.sum(senti_out != 0, dim=0).float() + 1 # in case of nan
+            senti_out = torch.sign(senti_feat)
+            senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices) # -1, +1
             senti_acc = torch.sum(senti_out == senti_tag).float() / senti_len
             self.cnt += 1
             self.cnt %= self.n_fold
-            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt], 1.0).to(self.device)
+            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
             self.train_mask = 1 - self.test_mask
             return senti_acc, output
