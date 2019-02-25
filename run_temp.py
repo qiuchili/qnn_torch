@@ -72,7 +72,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_senti.ini'    # define dataset in the config
+    config_file = 'config/config_sentiqdnn.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
