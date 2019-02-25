@@ -60,7 +60,7 @@ class SentiQDNN(torch.nn.Module):
             senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
             senti_out = torch.tanh(senti_feat)
             senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
-            senti_tag = self.sentiment_lexicon.index_select(0, indices) + 1)  # -1, +1
+            senti_tag = self.sentiment_lexicon.index_select(0, indices)  # -1, +1
             senti_loss = torch.sum(((senti_tag-senti_out)**2)*mask) / senti_len
             return senti_loss, output
         else:
