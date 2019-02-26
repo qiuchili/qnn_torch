@@ -22,7 +22,7 @@ class SentiQDNN(torch.nn.Module):
             perm_indices = torch.randperm(self.vocab_size)
             self.cnt = 0
             self.test_indice_list = [perm_indices[n*test_size:(n+1)*test_size] for n in range(self.n_fold)]
-            self.test_mask = self.sentiment_lexicon*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(opt.device)
+            self.test_mask = torch.abs(self.sentiment_lexicon)*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(opt.device)
             self.train_mask = 1 - self.test_mask 
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
@@ -72,6 +72,6 @@ class SentiQDNN(torch.nn.Module):
             senti_acc = torch.sum((senti_out == senti_tag).float()*mask) / senti_len
             self.cnt += 1
             self.cnt %= self.n_fold
-            self.test_mask = self.sentiment_lexicon*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
+            self.test_mask = torch.abs(self.sentiment_lexicon)*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
             self.train_mask = 1 - self.test_mask
             return senti_acc, output
