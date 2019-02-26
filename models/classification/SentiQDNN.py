@@ -69,7 +69,7 @@ class SentiQDNN(torch.nn.Module):
             senti_out = torch.sign(senti_feat)
             senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices) # -1, +1
-            senti_acc = torch.sum(senti_out == senti_tag).float() / senti_len
+            senti_acc = torch.sum((senti_out == senti_tag).float()*mask) / senti_len
             self.cnt += 1
             self.cnt %= self.n_fold
             self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
