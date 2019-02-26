@@ -14,6 +14,8 @@ class SentiQDNN(torch.nn.Module):
         self.device = opt.device
         self.max_sequence_len = opt.max_sequence_length
         sentiment_lexicon = opt.sentiment_dic
+        sentiment_lexicon_train = opt.sentiment_dic_train
+        sentiment_lexicon_test = opt.sentiment_dic_test
         self.n_fold = opt.n_fold
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
