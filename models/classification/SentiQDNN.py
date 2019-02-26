@@ -22,7 +22,7 @@ class SentiQDNN(torch.nn.Module):
             perm_indices = torch.randperm(self.vocab_size)
             self.cnt = 0
             self.test_indice_list = [perm_indices[n*test_size:(n+1)*test_size] for n in range(self.n_fold)]
-            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(opt.device)
+            self.test_mask = self.sentiment_lexicon*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(opt.device)
             self.train_mask = 1 - self.test_mask 
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
@@ -58,20 +58,20 @@ class SentiQDNN(torch.nn.Module):
         if self.training:
             mask = self.train_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
-            senti_out = torch.tanh(senti_feat)
-            senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
+            senti_out = torch.tanh(senti_feat)*mask
+            senti_len = torch.sum(senti_out != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices)  # -1, +1
             senti_loss = torch.sum(((senti_tag-senti_out)**2)*mask) / senti_len
             return senti_loss, output
         else:
             mask = self.test_mask.index_select(0, indices)
             senti_feat = torch.flatten(self.senti_dense(phase_embedding), 0, 1)
-            senti_out = torch.sign(senti_feat)
-            senti_len = torch.sum(senti_out*mask != 0, dim=0).float() + 1 # in case of nan
+            senti_out = torch.sign(senti_feat)*mask
+            senti_len = torch.sum(senti_out != 0, dim=0).float() + 1 # in case of nan
             senti_tag = self.sentiment_lexicon.index_select(0, indices) # -1, +1
             senti_acc = torch.sum((senti_out == senti_tag).float()*mask) / senti_len
             self.cnt += 1
             self.cnt %= self.n_fold
-            self.test_mask = torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
+            self.test_mask = self.sentiment_lexicon*torch.zeros(self.vocab_size, 1).scatter_(0, self.test_indice_list[self.cnt].unsqueeze(-1), 1.0).to(self.device)
             self.train_mask = 1 - self.test_mask
             return senti_acc, output
