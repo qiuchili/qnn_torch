@@ -11,6 +11,7 @@ class SentiFastText(nn.Module):
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
+            self.sentiment_mask = torch.abs(self.sentiment_lexicon)
         embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embed = nn.Embedding(embedding_matrix.shape[0], embedding_matrix.shape[1])
         self.linear = nn.Linear(50, 200)
@@ -30,11 +31,15 @@ class SentiFastText(nn.Module):
             senti_out = torch.sigmoid(self.senti_fc(embed).flatten(0, 1))
             indices = text_indices.flatten(-2, -1)
             senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
-            senti_loss = -torch.sum(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out)) / len(senti_out)
+            senti_mask = self.sentiment_mask.index_select(0, indices)
+            senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
+            senti_loss = -torch.sum(senti_mask*(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))) / senti_len
             return senti_loss, output
         else:
             senti_out = torch.sign(self.senti_fc(embed).flatten(0, 1))
             indices = text_indices.flatten(-2, -1)
             senti_tag = self.sentiment_lexicon.index_select(0, indices)
-            senti_acc = torch.sum(senti_out == senti_tag).float() / len(senti_out)
+            senti_mask = self.sentiment_mask.index_select(0, indices)
+            senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
+            senti_acc = torch.sum((senti_out == senti_tag)*senti_mask).float() / senti_len
             return senti_acc, output

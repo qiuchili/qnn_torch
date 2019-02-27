@@ -4,7 +4,7 @@ import io
 import logging
 import numpy as np
 import pickle
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from dataset.classification.data import data_gen,set_wordphase,create_dictionary,get_wordvec,get_index_batch
 from keras.utils import to_categorical
 from collections import Counter
@@ -34,10 +34,30 @@ class DataReader(object):
         else:
             self.dictionary = self.get_dictionary(self.datas.values())
             self.sentiment_dic = self.build_sentiment_lexicon()
+            self.k_fold_split()
             self.embedding = Embedding(self.dictionary,self.max_sequence_length)
         print('loading word embedding...')
         self.embedding.get_embedding(dataset_name = self.dataset_name, fname=opt.wordvec_path)
         self.opt_callback(opt) 
+        
+    def k_fold_split(self,k=5):
+        non_zero_ind = np.argwhere(self.sentiment_dic[:,0])
+        kf = KFold(n_splits=k)
+        train_dic_array = []
+        test_dic_array = []
+        for train_index, test_index in kf.split(non_zero_ind):
+            zero_array = np.zeros_like(self.sentiment_dic)
+            zero_array[non_zero_ind[train_index]] = 1
+            train_sentiment_dic = zero_array*self.sentiment_dic
+            train_dic_array.append(train_sentiment_dic)
+            
+            zero_array = np.zeros_like(self.sentiment_dic)
+            zero_array[non_zero_ind[test_index]] = 1
+            test_sentiment_dic = zero_array*self.sentiment_dic
+            test_dic_array.append(test_sentiment_dic)
+        self.sentiment_dic_train = train_dic_array
+        self.sentiment_dic_test = test_dic_array
+            
     
     def opt_callback(self,opt):
         opt.nb_classes = self.nb_classes            
@@ -46,6 +66,8 @@ class DataReader(object):
         opt.sample_num = self.sample_num
         opt.lookup_table = self.embedding.lookup_table     
         opt.sentiment_dic = self.sentiment_dic
+        opt.sentiment_dic_train = self.sentiment_dic_train
+        opt.sentiment_dic_test = self.sentiment_dic_test
         
     def build_sentiment_lexicon(self):
         sentiment_lexicon = np.zeros((len(self.dictionary),1))
