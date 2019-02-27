@@ -53,8 +53,8 @@ class SentiQDNN(torch.nn.Module):
         indices = input_seq.flatten(0, 1)
         if self.training:
             if self.variant == 'phase':
-                senti_out = torch.sigmoid(self.senti_dense(phase_embedding).flatten(0, 1))
-                senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
+                senti_out = torch.tanh(self.senti_dense(phase_embedding).flatten(0, 1))
+                senti_tag = self.sentiment_lexicon.index_select(0, indices)
                 senti_mask = self.sentiment_mask.index_select(0, indices)
                 senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
                 senti_loss = -torch.sum(senti_mask*((senti_tag-senti_out)**2)) / senti_len
@@ -77,7 +77,7 @@ class SentiQDNN(torch.nn.Module):
         else:
             if self.variant == 'phase':
                 senti_out = torch.sign(self.senti_dense(phase_embedding).flatten(0, 1))
-                senti_tag = self.sentiment_lexicon.index_select(0, indices)
+                senti_tag = torch.sign(self.sentiment_lexicon.index_select(0, indices))
                 senti_mask = self.sentiment_mask.index_select(0, indices)
                 senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
                 senti_acc = torch.sum((senti_out == senti_tag).float()*senti_mask) / senti_len
