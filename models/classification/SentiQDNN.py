@@ -53,7 +53,7 @@ class SentiQDNN(torch.nn.Module):
         if self.training:
             if self.variant == 'phase':
                 senti_out = self.senti_dense(phase_embedding).flatten(0, 1)
-                senti_tag = self.sentiment_lexicon.index_select(0, indices).unsqueeze(-1).long()
+                senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long()
                 return senti_out, senti_tag, output
             elif self.variant == 'amplitude':
                 senti_out = torch.sigmoid(self.senti_dense(amplitude_embedding).flatten(0, 1))
