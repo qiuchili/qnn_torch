@@ -53,8 +53,8 @@ class SentiQDNN(torch.nn.Module):
         if self.training:
             if self.variant == 'phase':
                 senti_out = torch.log(F.softmax(self.senti_dense(phase_embedding).flatten(0, 1), dim=-1))
-                senti_tag = self.sentiment_lexicon.index_select(0, indices).long()
-                senti_tag = torch.zeros(senti_tag.size(0), 18).to(self.device).scatter_(1, senti_tag, 1)
+                senti_tag_ = self.sentiment_lexicon.index_select(0, indices).long()
+                senti_tag = torch.zeros(senti_tag_.size(0), 18).to(self.device).scatter_(1, senti_tag_, 1)
                 senti_loss = -torch.sum(senti_tag*senti_out)
                 return senti_loss, output
             elif self.variant == 'amplitude':
