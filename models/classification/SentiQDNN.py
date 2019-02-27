@@ -51,43 +51,11 @@ class SentiQDNN(torch.nn.Module):
         
         indices = input_seq.flatten(0, 1)
         if self.training:
-            if self.variant == 'phase':
-                senti_out = self.senti_dense(phase_embedding).flatten(0, 1)
-                senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long()
-                return senti_out, senti_tag, output
-            elif self.variant == 'amplitude':
-                senti_out = torch.sigmoid(self.senti_dense(amplitude_embedding).flatten(0, 1))
-                senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
-                senti_mask = self.sentiment_mask.index_select(0, indices)
-                senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-                senti_loss = -torch.sum(senti_mask*(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))) / senti_len
-                return senti_loss, output
-            else:
-                embedding = self.measurement([seq_embedding_real, seq_embedding_imag])
-                senti_out = torch.sigmoid(self.senti_dense(embedding).flatten(0, 1))
-                senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
-                senti_mask = self.sentiment_mask.index_select(0, indices)
-                senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-                senti_loss = -torch.sum(senti_mask*(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))) / senti_len
-                return senti_loss, output
+            senti_out = self.senti_dense(phase_embedding).flatten(0, 1)
+            senti_tag = self.sentiment_lexicon.index_select(0, indices).squeeze(-1).long()
+            return senti_out, senti_tag, output
         else:
-            if self.variant == 'phase':
-                senti_out = torch.argmax(self.senti_dense(phase_embedding).flatten(0, 1), dim=-1)
-                senti_tag = self.sentiment_lexicon.index_select(0, indices).long()
-                senti_acc = torch.sum((senti_out == senti_tag).float()) / senti_out.size(0)
-                return senti_acc, output
-            elif self.variant == 'amplitude':
-                senti_out = torch.sign(self.senti_dense(amplitude_embedding).flatten(0, 1))
-                senti_tag = self.sentiment_lexicon.index_select(0, indices)
-                senti_mask = self.sentiment_mask.index_select(0, indices)
-                senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-                senti_acc = torch.sum((senti_out == senti_tag).float()*senti_mask) / senti_len
-                return senti_acc, output
-            else:
-                embedding = self.measurement([seq_embedding_real, seq_embedding_imag])
-                senti_out = torch.sign(self.senti_dense(embedding).flatten(0, 1))
-                senti_tag = self.sentiment_lexicon.index_select(0, indices)
-                senti_mask = self.sentiment_mask.index_select(0, indices)
-                senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-                senti_acc = torch.sum((senti_out == senti_tag).float()*senti_mask) / senti_len
-                return senti_acc, output
+            senti_out = torch.argmax(self.senti_dense(phase_embedding).flatten(0, 1), dim=-1)
+            senti_tag = self.sentiment_lexicon.index_select(0, indices).long()
+            senti_acc = torch.sum((senti_out == senti_tag).float()) / senti_out.size(0)
+            return senti_acc, output
