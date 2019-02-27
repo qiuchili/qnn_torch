@@ -64,6 +64,13 @@ def run(params):
                     max_test_acc = test_acc
                 print('average_train_acc: {}, average_train_loss: {}, test_acc: {}, senti_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc, senti_acc))
     
+    embedding_layer = None
+    if params.network_type == 'fasttext':
+        embedding_layer = model.embed
+    else:
+        embedding_layer = model.complex_embed
+    
+    torch.save(embedding_layer.state_dict(),open('temp/{}_{}'.format(params.network_type, params.dataset_name),'wb'))
     print('max_test_acc: {}'.format(max_test_acc))
 
 
@@ -71,7 +78,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_sentiqdnn.ini'    # define dataset in the config
+    config_file = 'config/config_realnn.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)

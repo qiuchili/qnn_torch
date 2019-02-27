@@ -21,6 +21,7 @@ def setup(opt):
         from models.classification.MLLM import MLLM
         from models.classification.SentiQDNN import SentiQDNN
         from models.classification.CNN import TextCNN
+        from models.classification.MLP import MLP
         from models.classification.LSTM import TextLSTM
         from models.classification.FastText import FastText
         from models.classification.ComplexFastText import ComplexFastText
@@ -49,6 +50,8 @@ def setup(opt):
         model = ComplexFastText(opt)
     elif opt.network_type == "sentifasttext":
         model = SentiFastText(opt) 
+    elif opt.network_type == "mlp":
+        model = MLP(opt) 
         
     elif opt.network_type == "bert":
         from models.representation.keras.BertFasttext import BERTFastext
