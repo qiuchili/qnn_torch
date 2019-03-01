@@ -19,7 +19,8 @@ def run(params):
     train_index_array, test_index_array = k_fold_split(sentiment_dic, k=params.n_fold)
     
     
-    weights_dic = torch.load(params.network_file)
+    network_file = "temp/"+"{}_{}".format(params.model_type,params.dataset_name)
+    weights_dic = torch.load(network_file, map_location=params.device_type)
     embedding = None
     if params.variant == 'phase':
         embedding = weights_dic['phase_embed.weight']
@@ -34,7 +35,7 @@ def run(params):
         re = amplitude_embedding *torch.cos(phase_embedding)
         im = amplitude_embedding *torch.sin(phase_embedding)
         embedding = re,im
-    elif params.varient == 'real':
+    elif params.variant == 'real':
         embedding = weights_dic['weight']
     else:
         embedding = weights_dic['phase_embed.weight']
@@ -42,13 +43,16 @@ def run(params):
     
     params.embedding_size = embedding.shape[1]
     params.nb_classes = 1
+    #Construct training and test set
     model = models.setup(params)
     model = model.to(params.device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
-    #Construct training and test set
     accuracy_list = []
+    fold_id = 0
     for train_index, test_index in zip(train_index_array, test_index_array):
+        print('fold {}:'.format(fold_id))
+        fold_id = fold_id+1
         train_x = embedding[train_index[:,0]]
         train_y = sentiment_dic[train_index[:,0],0]
         train_y = torch.tensor(train_y, dtype = torch.float32).unsqueeze(1)
@@ -78,23 +82,24 @@ def run(params):
                 train_acc = n_correct / n_total
                 train_accs.append(train_acc)
                 train_losses.append(loss.item())    
-                if _i % 50 == 0:
-                    model.eval()
-                    avg_train_acc = np.mean(train_accs)
-                    avg_train_loss = np.mean(train_losses)
-                    train_accs = []
-                    train_losses = []
-                    t_n_correct = 0
-                    t_n_total = 0
-                    cnt = 0
-                    for _ii,test_data in enumerate(test_loader,0):
-                        cnt += 1
-                        test_x, test_y = test_data
-                        test_output = model(test_x)
-                        t_n_correct += (test_output.sign() == test_y).sum().item()
-                        t_n_total += len(test_output)
-                    test_acc = t_n_correct / t_n_total
-                    print('average_train_acc: {}, average_train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
+#                print(train_acc,loss.item())
+#                if _i % 5 == 0:
+#                    model.eval()
+#                    avg_train_acc = np.mean(train_accs)
+#                    avg_train_loss = np.mean(train_losses)
+#                    train_accs = []
+#                    train_losses = []
+#                    t_n_correct = 0
+#                    t_n_total = 0
+#                    cnt = 0
+#                    for _ii,test_data in enumerate(test_loader,0):
+#                        cnt += 1
+#                        test_x, test_y = test_data
+#                        test_output = model(test_x)
+#                        t_n_correct += (test_output.sign() == test_y).sum().item()
+#                        t_n_total += len(test_output)
+#                    test_acc = t_n_correct / t_n_total
+#                    print('average_train_acc: {}, average_train_loss: {}, test_acc: {}'.format(avg_train_acc, avg_train_loss, test_acc))
         model.eval()
         t_n_correct = 0
         t_n_total = 0
@@ -108,10 +113,15 @@ def run(params):
         test_acc = t_n_correct / t_n_total
         accuracy_list.append(test_acc)
         print('final test accuracy: {}'.format(test_acc))
+        model._reset_params()
     print('cross_validation accuracy: {}'.format(sum(accuracy_list)/float(len(accuracy_list))))
         
-    
+def weights_init(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight.data)
  
+    
+
 def build_sentiment_lexicon(dictionary, sentiment_dic_file):
     sentiment_lexicon = np.zeros((len(dictionary),1))
     with open(sentiment_dic_file, 'r', encoding='utf-8', newline='\n', errors='ignore') as fin:
@@ -144,9 +154,11 @@ if __name__=="__main__":
     
     if torch.cuda.is_available():
         params.device = torch.device('cuda')
+        params.device_type = 'cuda'
         torch.cuda.manual_seed(params.seed)
     else:
         params.device = torch.device('cpu')
+        params.device_type = 'cpu'
         torch.manual_seed(params.seed)
     
     run(params)

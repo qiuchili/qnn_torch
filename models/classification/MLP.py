@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class MLP(nn.Module): 
     def __init__(self, opt): 
@@ -22,3 +23,10 @@ class MLP(nn.Module):
         x = self.fc3(x)
         output = self.activation2(x)
         return output
+    
+    def _reset_params(self):
+        for p in self.parameters():
+            if p.requires_grad:
+                stdv = 1. / math.sqrt(p.shape[0])
+                torch.nn.init.uniform_(p, a=-stdv, b=stdv)
+    
