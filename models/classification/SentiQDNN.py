@@ -12,7 +12,7 @@ class SentiQDNN(torch.nn.Module):
     def __init__(self, opt):
         super(SentiQDNN, self).__init__()
         self.device = opt.device
-        self.variant = opt.variant
+        #self.variant = opt.variant
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)
@@ -60,5 +60,5 @@ class SentiQDNN(torch.nn.Module):
             senti_tag = self.sentiment_lexicon.index_select(0, indices)
             senti_mask = self.sentiment_mask.index_select(0, indices)
             senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-            senti_acc = torch.sum((senti_out == senti_tag)*senti_mask).float() / senti_len
+            senti_acc = torch.sum((senti_out == senti_tag).float()*senti_mask).float() / senti_len
             return senti_acc, output

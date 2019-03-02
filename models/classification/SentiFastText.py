@@ -41,5 +41,5 @@ class SentiFastText(nn.Module):
             senti_tag = self.sentiment_lexicon.index_select(0, indices)
             senti_mask = self.sentiment_mask.index_select(0, indices)
             senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-            senti_acc = torch.sum((senti_out == senti_tag)*senti_mask).float() / senti_len
+            senti_acc = torch.sum((senti_out == senti_tag).float()*senti_mask).float() / senti_len
             return senti_acc, output
