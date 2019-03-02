@@ -33,7 +33,7 @@ class SentiFastText(nn.Module):
             senti_tag = (self.sentiment_lexicon.index_select(0, indices) + 1) / 2
             senti_mask = self.sentiment_mask.index_select(0, indices)
             senti_len = torch.sum(senti_mask != 0, dim=0).float() + 1
-            senti_loss = -torch.sum(senti_mask*(senti_tag*torch.log(senti_out)+(1-senti_tag)*torch.log(1-senti_out))) / senti_len
+            senti_loss = -torch.sum(senti_mask*(senti_tag*torch.log(senti_out+1e-8)+(1-senti_tag)*torch.log(1-senti_out+1e-8))) / senti_len
             return senti_loss, output
         else:
             senti_out = torch.sign(self.senti_fc(embed).flatten(0, 1))

@@ -11,7 +11,6 @@ def run(params):
     model = models.setup(params)
     model = model.to(params.device)
     criterion = nn.CrossEntropyLoss()
-    senti_criterion = nn.CrossEntropyLoss() 
     
     optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
 
@@ -26,8 +25,8 @@ def run(params):
             inputs = sample_batched['X'].to(params.device)
             targets = sample_batched['y'].to(params.device)
             if params.strategy == 'multi-task':
-                senti_out, senti_tag, outputs = model(inputs)
-                loss = criterion(outputs, targets.argmax(1)) + params.gamma*senti_criterion(senti_out, senti_tag)
+                senti_loss, outputs = model(inputs)
+                loss = criterion(outputs, targets.argmax(1)) + params.gamma*senti_loss
             else:
                 outputs = model(inputs)
                 loss = criterion(outputs, targets.argmax(1))
