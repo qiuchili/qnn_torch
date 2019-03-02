@@ -42,6 +42,8 @@ def run(params):
                 model.eval()
                 avg_train_acc = np.mean(train_accs)
                 avg_train_loss = np.mean(train_losses)
+                train_accs = []
+                train_losses = []
                 t_n_correct = 0
                 t_n_total = 0
                 senti_acc = 0
@@ -53,11 +55,12 @@ def run(params):
                     with torch.no_grad():
                         if params.strategy == 'multi-task':
                             senti_acc_, t_outputs = model(t_inputs)
+                            senti_acc += senti_acc_.item()
                         else:
                             t_outputs = model(t_inputs)
                         t_n_correct += (t_outputs.argmax(1) == t_targets.argmax(1)).sum().item()
                         t_n_total += len(t_outputs)
-                        senti_acc += senti_acc_.item()
+                        
                 test_acc = t_n_correct / t_n_total
                 senti_acc /= cnt
                 if test_acc > max_test_acc:
@@ -78,7 +81,7 @@ def run(params):
 if __name__=="__main__":
   
     params = Params()
-    config_file = 'config/config_realnn.ini'    # define dataset in the config
+    config_file = 'config/config_qdnn.ini'    # define dataset in the config
     params.parse_config(config_file)    
     
     reader = dataset.setup(params)
