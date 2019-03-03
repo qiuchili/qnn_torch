@@ -46,6 +46,7 @@ def run(params):
     #Construct training and test set
     model = models.setup(params)
     model = model.to(params.device)
+    model._reset_params()
     criterion = nn.MSELoss()
     optimizer = torch.optim.RMSprop(list(model.parameters()), lr=params.lr)
     accuracy_list = []

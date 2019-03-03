@@ -12,7 +12,6 @@ class SentiQDNN(torch.nn.Module):
     def __init__(self, opt):
         super(SentiQDNN, self).__init__()
         self.device = opt.device
-        self.variant = opt.variant
         sentiment_lexicon = opt.sentiment_dic
         if sentiment_lexicon is not None:
             self.sentiment_lexicon = torch.tensor(sentiment_lexicon, dtype=torch.float).to(opt.device)

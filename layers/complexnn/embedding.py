@@ -35,7 +35,8 @@ class ComplexEmbedding(torch.nn.Module):
         if sentiment_lexicon is None:
             sign_matrix = torch.sign(embedding_matrix)
             amplitude_embedding_matrix = sign_matrix * embedding_matrix
-            self.amplitude_embed = nn.Embedding.from_pretrained(amplitude_embedding_matrix, freeze=freeze)
+#            self.amplitude_embed = nn.Embedding.from_pretrained(amplitude_embedding_matrix, freeze=freeze)
+            self.amplitude_embed = AmplitudeEmbedding(amplitude_embedding_matrix)
             phase_embedding_matrix = math.pi * (1 - sign_matrix) / 2 # based on [0, 2*pi]
             self.phase_embed = nn.Embedding.from_pretrained(phase_embedding_matrix, freeze=freeze)
         else:
