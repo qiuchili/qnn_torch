@@ -20,7 +20,7 @@ class SentiQDNN(torch.nn.Module):
         self.num_measurements = opt.measurement_size
         self.embedding_matrix = torch.tensor(opt.lookup_table, dtype=torch.float)
         self.embedding_dim = self.embedding_matrix.shape[1]
-        self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix, self.sentiment_lexicon)
+        self.complex_embed = ComplexEmbedding(opt, self.embedding_matrix)
         self.l2_norm = L2Norm(dim = -1, keep_dims = True)
         self.l2_normalization = L2Normalization(dim = -1)
         self.activation = nn.Softmax(dim = 1)
