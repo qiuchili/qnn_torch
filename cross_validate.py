@@ -17,8 +17,6 @@ def run(params):
     dictionary = pickle.load(open(pkl_name,'rb'))
     sentiment_dic = build_sentiment_lexicon(dictionary, params.sentiment_dic_file)
     train_index_array, test_index_array = k_fold_split(sentiment_dic, k=params.n_fold)
-    
-    
     network_file = "temp/"+"{}_{}".format(params.model_type,params.dataset_name)
     weights_dic = torch.load(network_file, map_location=params.device_type)
     embedding = None
