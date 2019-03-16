@@ -25,8 +25,8 @@ This repository is supported by [Benyou Wang](https://wabyking.github.io/old), [
 ## Usage
 
 - Set up a configuration file and put it into directory **/config**. Details about how to configurate could be referred to in **/config/config_qdnn.ini**.
-    - First, you should make it clear which network we will use, i.e. *network_type*.
-    - Second, if you are using a network utilizing sentiment lexicon as external information such as **SentiQDNN**, we should set *startegy* in configuration file to *multi-task*.
+    - First, you should make it clear which network you will use, i.e. *network_type*.
+    - Second, if you are using a network utilizing sentiment lexicon as external information such as **SentiQDNN**, we should set *strategy* in configuration file to *multi-task*.
     - Plus, you need specify other details like *dataset_name*, *sentiment_dic_file*, *batch_size*, *lr*, etc.
 - Modify the configuration file you will use in **run.py** as
 ```python
