@@ -22,8 +22,8 @@ This repository is supported by [Benyou Wang](https://wabyking.github.io/old), [
 - CNN
 - LSTM
 ## Data
-- Download the data at https://www.dropbox.com/s/zpu2wx5bq54agk8/data.zip?dl=0.
-- Put the downloaded data folder in the root directory.
+- Download the data at https://www.dropbox.com/s/zpu2wx5bq54agk8/data.zip?dl=0, and put the downloaded data folder in the root directory.
+- Download the Glove embeddings at http://nlp.stanford.edu/data/glove.6B.zip, and put the downloaded embeddings folder in the root directory.
 
 ## Usage
 
