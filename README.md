@@ -14,9 +14,9 @@ This repository is supported by [Benyou Wang](https://wabyking.github.io/old), [
 
 ## Implemented Models
 
-- QDNN
-- LocalMixtureNN
-- MLLM
+- QDNN (Global Mixture)
+- LocalMixtureNN (Local Mixture)
+- MLLM 
 - SentiQDNN
 - FastText
 - CNN
