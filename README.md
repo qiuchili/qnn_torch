@@ -23,7 +23,7 @@ This repository is supported by [Benyou Wang](https://wabyking.github.io/old), [
 - LSTM
 ## Data
 - Download the data at https://www.dropbox.com/s/zpu2wx5bq54agk8/data.zip?dl=0.
-- Place the downloaded data in the root directory.
+- Put the downloaded data folder in the root directory.
 
 ## Usage
 
