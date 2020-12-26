@@ -21,6 +21,9 @@ This repository is supported by [Benyou Wang](https://wabyking.github.io/old), [
 - FastText
 - CNN
 - LSTM
+## Data
+- Download the data at https://www.dropbox.com/s/zpu2wx5bq54agk8/data.zip?dl=0.
+- Place the downloaded data at /data.
 
 ## Usage
 
